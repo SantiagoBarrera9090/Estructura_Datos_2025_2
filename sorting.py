@@ -1,8 +1,7 @@
 """Algoritmos de ordenamiento manuales para listas enlazadas: MergeSort y QuickSort.
 
-Comentarios: aqui implemento versiones que funcionan con la LinkedList propia.
-El estilo de los comentarios es ameno, como si fuera un estudiante colombiano
-explicando lo que hace el codigo.
+Implementa versiones que operan sobre la `LinkedList` propia del proyecto.
+Los algoritmos devuelven nuevas listas enlazadas ordenadas.
 """
 
 from structures import LinkedList
@@ -13,10 +12,10 @@ def _normalize_key(keyfn, record):
 
     Devuelve una tupla (type_tag, value) donde type_tag ordena tipos:
     - 0: valores ordenables directos (int, float, date, datetime)
-    - 1: strings (se comparan en minuscula)
-    - 2: fallback (cadena vacia)
+    - 1: strings (se comparan en minúscula)
+    - 2: fallback (cadena vacía)
 
-    Esto evita comparar tipos incompatibles directamente.
+    Evita comparar tipos incompatibles directamente.
     """
     try:
         v = keyfn(record)
@@ -24,7 +23,7 @@ def _normalize_key(keyfn, record):
         return (2, "")
     if v is None:
         return (2, "")
-    # import aquí para evitar dependencia global
+    # Import local para evitar dependencia global
     from datetime import date, datetime
 
     if isinstance(v, (int, float)):
@@ -45,8 +44,8 @@ def _normalize_key(keyfn, record):
 def split_linkedlist(ll: LinkedList):
     """Divide una linked list en dos mitades y devuelve (left, right).
 
-    Ojo: esto no modifica los datos, solo separa las referencias para trabajar
-    con ellas luego en el merge sort.
+    Nota: esto no modifica los datos originales; construye dos nuevas listas
+    que contienen los mismos elementos referenciados.
     """
     if ll.head is None or ll.head.next is None:
         left = LinkedList()
@@ -80,7 +79,7 @@ def split_linkedlist(ll: LinkedList):
 
 
 def merge_sorted(left: LinkedList, right: LinkedList, keyfn):
-    """Fusiona dos listas ya ordenadas segun keyfn."""
+    """Fusiona dos listas ya ordenadas según keyfn."""
     result = LinkedList()
     a = left.head
     b = right.head
@@ -122,7 +121,8 @@ def merge_sort_linkedlist(ll: LinkedList, keyfn=lambda r: r.customer_id):
 def quick_sort_linkedlist(ll: LinkedList, keyfn=lambda r: r.customer_id):
     """QuickSort para linked list usando particionamiento en tres listas.
 
-    Es recursivo y sencillo; no es la version mas rapida pero cumple el objetivo.
+    Implementación recursiva que particiona en menores, iguales y mayores
+    respecto al pivote.
     """
     if ll.head is None or ll.head.next is None:
         out = LinkedList()

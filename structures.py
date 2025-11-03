@@ -1,10 +1,9 @@
 """
-Estructuras de datos propias: Node, LinkedList, Stack, Queue, AVLTree.
+Estructuras de datos: Node, LinkedList, Stack, Queue, AVLTree.
 
-Comentarios (estilo estudiante colombiano): las estructuras son sencillas y
-orientadas a que el ejercicio cumpla la restriccion de no usar list/dict
-como contenedor principal. Ojo: algun codigo de lectura puede devolver listas
-temporalmente (por ejemplo csv.reader), eso lo tratamos como temporal.
+Implementación basada en nodos enlazados para las colecciones principales.
+Las lecturas temporales (por ejemplo, las filas de csv.reader) se consideran
+estructuras temporales fuera de las colecciones de núcleo.
 """
 
 class Node:
@@ -18,9 +17,10 @@ class Node:
 
 class LinkedList:
     """Lista doblemente enlazada ligera.
+    Lista doblemente enlazada ligera.
 
-    La uso para mantener el orden original del archivo y tambien para
-    aplicar los algoritmos de ordenamiento manuales.
+    Usada para mantener el orden original del archivo y para aplicar
+    algoritmos de ordenamiento implementados sobre listas enlazadas.
     """
 
     def __init__(self):
@@ -58,8 +58,9 @@ class LinkedList:
 
 class Stack:
     """Implementacion simple de pila (LIFO) usando LinkedList.
+    Implementación simple de pila (LIFO) usando LinkedList.
 
-    Nota: la implementacion es facil y clara, pa' que no nos compliquemos.
+    Implementación sencilla y explícita para uso en búsquedas comparativas.
     """
 
     def __init__(self):
@@ -121,8 +122,9 @@ class Queue:
 class AVLNode:
     def __init__(self, key, record):
         self.key = key
-        # guardamos una lista de registros para soportar claves duplicadas
-        self.records = [record]
+        # guardamos los registros en una LinkedList para soportar claves duplicadas
+        self.records = LinkedList()
+        self.records.append(record)
         self.left = None
         self.right = None
         self.height = 1
@@ -137,7 +139,7 @@ class AVLTree:
 
     def __init__(self, keyfn=None):
         self.root = None
-        # funcion para obtener la clave desde un record
+        # función para obtener la clave desde un record
         self.keyfn = keyfn if keyfn else (lambda r: r.customer_id)
         self._count = 0
 
@@ -181,7 +183,7 @@ class AVLTree:
             return node
         self.update_height(node)
         bf = self.balance_factor(node)
-        # casos de rotacion
+        # casos de rotación
         if bf > 1 and key < node.left.key:
             return self.rotate_right(node)
         if bf < -1 and key > node.right.key:
@@ -201,16 +203,20 @@ class AVLTree:
         self._count += 1
 
     def find(self, key):
-        """Busca por clave exacta y devuelve la lista de registros (o lista vacia)."""
+        """Busca por clave exacta y devuelve la lista de registros (o lista vacía)."""
         node = self.root
         while node:
             if key == node.key:
-                return list(node.records)
+                # devolver una copia como LinkedList para evitar exponer la estructura interna
+                out = LinkedList()
+                for r in node.records:
+                    out.append(r)
+                return out
             elif key < node.key:
                 node = node.left
             else:
                 node = node.right
-        return []
+        return LinkedList()
 
     def inorder(self):
         # generator in-order
@@ -231,7 +237,8 @@ class AVLTree:
             if not node:
                 return
             yield from _in(node.left)
-            yield (node.key, list(node.records))
+            # devolvemos la LinkedList interna (no la convertimos a list)
+            yield (node.key, node.records)
             yield from _in(node.right)
 
         yield from _in(self.root)
@@ -240,23 +247,24 @@ class AVLTree:
         """Generator por niveles que devuelve (key, records_list) para visualizacion."""
         if not self.root:
             return
-        q = []
-        q.append(self.root)
-        while q:
-            node = q.pop(0)
-            yield (node.key, list(node.records))
+        # usar la Queue propia para evitar listas Python en estructuras núcleo
+        q = Queue()
+        q.enqueue(self.root)
+        while not q.is_empty():
+            node = q.dequeue()
+            yield (node.key, node.records)
             if node.left:
-                q.append(node.left)
+                q.enqueue(node.left)
             if node.right:
-                q.append(node.right)
+                q.enqueue(node.right)
 
     def size(self):
         return self._count
 
     def find_by_predicate(self, predicate):
-        """Recorre el arbol y devuelve registros que cumplen predicate(record).
+        """Recorre el árbol y devuelve registros que cumplen predicate(record).
 
-        Se usa yield para no almacenar todo en memoria (pa' ser eficientes).
+        Se usa yield para no almacenar todo en memoria.
         """
 
         def _in(node):

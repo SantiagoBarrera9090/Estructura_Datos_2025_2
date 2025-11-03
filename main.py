@@ -1,8 +1,8 @@
-"""Punto de entrada: carga de CSV, menu basico y operaciones solicitadas.
+"""Punto de entrada: carga de CSV, menú y operaciones básicas.
 
-Comentarios estilo estudiante colombiano: aqui tenemos lo minimo viable para
-cargar los datos y probar ordenamientos y busquedas. El menu evita acentos para
-no pelear con la consola de Windows.
+Este módulo contiene la lógica principal: carga de datos, menú interactivo y
+orquestación de las operaciones sobre las estructuras de datos. El menú evita
+acentos para compatibilidad con consolas en Windows.
 """
 
 import sys
@@ -106,6 +106,7 @@ def load_csv(path, tree_keyfn=None):
     return tree, ll, stk, q, stats
 
 
+
 def print_first_n_from_list(ll: LinkedList, n=None):
     i = 0
     for rec in ll:
@@ -125,11 +126,14 @@ def search_by_field_in_tree(tree: AVLTree, field_name, value):
         except Exception:
             return False
 
-    return list(tree.find_by_predicate(pred))
+    out = LinkedList()
+    for r in tree.find_by_predicate(pred):
+        out.append(r)
+    return out
 
 
 def search_by_field_in_list(ll: LinkedList, field_name, value):
-    out = []
+    out = LinkedList()
     for r in ll:
         v = getattr(r, field_name, None)
         try:
@@ -141,7 +145,7 @@ def search_by_field_in_list(ll: LinkedList, field_name, value):
 
 
 def search_by_date_range(tree_or_list, start_date, end_date):
-    out = []
+    out = LinkedList()
 
     def check(r):
         if not r.subscription_date:
@@ -207,7 +211,7 @@ def interactive_menu():
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
             for rec in ll:
                 tree_for_last_sort.insert(rec)
-            print(f'Ordenado por Customer Id (merge sort). Total registros: {len(list(ll))}')
+            print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')
             # mostrar los primeros 10 registros resultantes para que el usuario vea el efecto
             print('\nPrimeros registros despues de ordenar:')
             print_first_n_from_list(ll, 10)
@@ -232,7 +236,7 @@ def interactive_menu():
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
             for rec in ll:
                 tree_for_last_sort.insert(rec)
-            print(f'Ordenado por {sort_name}. Total registros: {len(list(ll))}')
+            print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
             print('\nPrimeros registros despues de ordenar:')
             print_first_n_from_list(ll, 10)
         elif opt == '4':
@@ -247,7 +251,7 @@ def interactive_menu():
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
             for rec in ll:
                 tree_for_last_sort.insert(rec)
-            print(f'Ordenado por Country (merge sort). Total registros: {len(list(ll))}')
+            print(f'Ordenado por Country (merge sort). Total registros: {ll.size()}')
             print('\nPrimeros registros despues de ordenar:')
             print_first_n_from_list(ll, 10)
         elif opt == '5':
@@ -297,7 +301,9 @@ def interactive_menu():
                     else:
                         # usar recorrido completo del árbol principal si existe
                         if tree is not None:
-                            results_tree = list(tree.find_by_predicate(lambda r: str(getattr(r, field, '')).lower() == value.lower()))
+                            results_tree = LinkedList()
+                            for r in tree.find_by_predicate(lambda r: str(getattr(r, field, '')).lower() == value.lower()):
+                                results_tree.append(r)
                         else:
                             results_tree = search_by_field_in_list(ll, field, value)
                 t1 = time.perf_counter()
@@ -305,11 +311,11 @@ def interactive_menu():
                 t2 = time.perf_counter()
                 results_list = search_by_field_in_list(ll, field, value)
                 t3 = time.perf_counter()
-                print(f'Encontrados en arbol: {len(results_tree)} (tiempo {t1-t0:.6f}s)')
+                print(f'Encontrados en arbol: {results_tree.size()} (tiempo {t1-t0:.6f}s)')
                 for r in results_tree:
                     print(r)
                 print(f'---')
-                print(f'Encontrados en lista/pila/cola: {len(results_list)} (tiempo {t3-t2:.6f}s)')
+                print(f'Encontrados en lista/pila/cola: {results_list.size()} (tiempo {t3-t2:.6f}s)')
                 for r in results_list:
                     print(r)
             else:
@@ -364,7 +370,7 @@ def interactive_menu():
 
             cc_list = LinkedList()
             for key, records in country_idx.items():
-                cc_list.append(CountryCount(key, len(records)))
+                cc_list.append(CountryCount(key, records.size()))
             # ordenamos por count desc usando merge_sort (keyfn devuelve -count para invertir)
             cc_sorted = merge_sort_linkedlist(cc_list, keyfn=lambda x: -x.count)
             choice = input('Cuantos paises mostrar? (n para todos): ').strip()
@@ -392,7 +398,7 @@ def interactive_menu():
                 continue
             print('Arbol por niveles (key - #registros en la clave):')
             for key, records in tree_for_last_sort.level_order():
-                print(f'{key} - {len(records)}')
+                print(f'{key} - {records.size()}')
         elif opt == '9':
             path = input('Ruta del CSV: ').strip()
             if not os.path.exists(path):

@@ -11,7 +11,7 @@ if __name__ == '__main__':
     print('First 5 countries and counts:')
     c = 0
     for key, records in idx.items():
-        print(key, len(records))
+        print(key, records.size())
         c += 1
         if c >= 5:
             break
