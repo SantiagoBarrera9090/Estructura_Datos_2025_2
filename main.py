@@ -23,61 +23,61 @@ def load_csv(path, tree_keyfn=None):
     tree_keyfn: función opcional para extraer la clave usada en el AVLTree.
     Retorna una tupla: (AVLTree, LinkedList, Stack, Queue, stats).
     """
-    ll = LinkedList()  # lista con orden original de registros
-    stk = Stack()  # pila para demostración LIFO
-    q = Queue()  # cola para demostración FIFO
-    tree = AVLTree(keyfn=tree_keyfn)  # árbol índice opcional
-    count = 0  # contador de registros procesados
-    min_date = None  # fecha mínima encontrada
-    max_date = None  # fecha máxima encontrada
+    ll = LinkedList()  # creamos una lista enlazada para mantener el orden original de los datos
+    stk = Stack()  # creamos una pila para demostrar funcionamiento LIFO (último en entrar, primero en salir)
+    q = Queue()  # creamos una cola para demostrar funcionamiento FIFO (primero en entrar, primero en salir)
+    tree = AVLTree(keyfn=tree_keyfn)  # creamos un árbol balanceado para búsquedas rápidas
+    count = 0  # contador para saber cuántos registros hemos procesado
+    min_date = None  # guardaremos la fecha de suscripción más antigua que encontremos
+    max_date = None  # guardaremos la fecha de suscripción más reciente que encontremos
 
-    # Abrir el CSV en modo lectura, ignorando errores de encoding comunes
+    # abrimos el archivo CSV para lectura, ignorando caracteres problemáticos
     with open(path, encoding="utf-8", errors="ignore") as f:
-        reader = csv.reader(f)  # iterador sobre filas CSV
-        headers = next(reader, None)  # cabeceras si existen
+        reader = csv.reader(f)  # creamos un lector que nos dará una fila a la vez
+        headers = next(reader, None)  # intentamos leer la primera fila como cabeceras
 
-        # Construir mapa de índices para columnas esperadas
-        index = {}  # diccionario de nombre_campo -> índice_columna
-        if headers:
-            h = [c.strip().lower() for c in headers]  # normalizar cabeceras
-            aliases = {
-                'customer_id': ['customer id', 'customer_id', 'id'],
-                'first_name': ['first name', 'firstname', 'first_name'],
-                'last_name': ['last name', 'lastname', 'last_name'],
-                'company': ['company', 'company name'],
-                'city': ['city'],
-                'country': ['country'],
-                'email': ['email'],
-                'subscription_date': ['subscription date', 'subscription_date', 'date'],
-                'website': ['website', 'web'],
-            }  # alias de nombres posibles
-            for key, names in aliases.items():
-                for nm in names:
-                    if nm in h:
-                        index[key] = h.index(nm)  # asignar índice si existe
-                        break
+        # construimos un mapa para encontrar las columnas del CSV por su nombre
+        index = {}  # diccionario que nos dirá en qué columna está cada campo
+        if headers:  # si encontramos cabeceras en la primera fila
+            h = [c.strip().lower() for c in headers]  # limpiamos y convertimos a minúsculas
+            aliases = {  # definimos los nombres posibles para cada campo
+                'customer_id': ['customer id', 'customer_id', 'id'],  # diferentes formas de nombrar el ID
+                'first_name': ['first name', 'firstname', 'first_name'],  # diferentes formas del nombre
+                'last_name': ['last name', 'lastname', 'last_name'],  # diferentes formas del apellido
+                'company': ['company', 'company name'],  # diferentes formas de la empresa
+                'city': ['city'],  # nombre de la ciudad
+                'country': ['country'],  # nombre del país
+                'email': ['email'],  # correo electrónico
+                'subscription_date': ['subscription date', 'subscription_date', 'date'],  # fecha de suscripción
+                'website': ['website', 'web'],  # página web
+            }  # estos alias nos ayudan a ser flexibles con los nombres de columnas
+            for key, names in aliases.items():  # por cada campo que necesitamos
+                for nm in names:  # probamos cada nombre posible
+                    if nm in h:  # si encontramos este nombre en las cabeceras
+                        index[key] = h.index(nm)  # guardamos en qué columna está
+                        break  # no necesitamos seguir buscando
 
-        # Procesar cada fila del CSV
-        for row in reader:
-            try:
-                # Helper local para obtener valor de columna por clave
-                def val(k, default=""):
-                    if k in index:
-                        idx = index[k]
-                        if idx < len(row):
-                            return row[idx]
-                        return default
-                    return default
+        # procesamos cada fila de datos del CSV una por una
+        for row in reader:  # por cada línea que quede en el archivo
+            try:  # intentamos procesar esta fila, si falla la saltamos
+                # función auxiliar para obtener el valor de una columna de forma segura
+                def val(k, default=""):  # k es el nombre del campo, default es qué devolver si no existe
+                    if k in index:  # si sabemos dónde está esta columna
+                        idx = index[k]  # obtenemos el número de columna
+                        if idx < len(row):  # si la fila tiene suficientes columnas
+                            return row[idx]  # devolvemos el valor de esa columna
+                        return default  # si no hay suficientes columnas, devolvemos el valor por defecto
+                    return default  # si no conocemos esta columna, devolvemos el valor por defecto
 
-                # Extraer campos según si hay cabeceras detectadas
-                if headers and index:
-                    cid = val('customer_id', '')
-                    fn = val('first_name', '')
-                    ln = val('last_name', '')
-                    comp = val('company', '')
-                    city = val('city', '')
-                    country = val('country', '')
-                    email = val('email', '')
+                # extraemos los valores de cada campo dependiendo de si tenemos cabeceras
+                if headers and index:  # si detectamos cabeceras y tenemos el mapa de columnas
+                    cid = val('customer_id', '')  # obtenemos el ID del cliente
+                    fn = val('first_name', '')  # obtenemos el primer nombre
+                    ln = val('last_name', '')  # obtenemos el apellido
+                    comp = val('company', '')  # obtenemos el nombre de la empresa
+                    city = val('city', '')  # obtenemos la ciudad
+                    country = val('country', '')  # obtenemos el país
+                    email = val('email', '')  # obtenemos el correo electrónico
                     sub = val('subscription_date', '')
                     web = val('website', '')
                 else:
@@ -122,30 +122,49 @@ def print_first_n_from_list(ll: LinkedList, n=None, sort_info=None):
         return
     
     total_records = ll.size()  # obtenemos el total para optimizar
-    if sort_info:
-        print(f'Mostrando todos los {total_records:,} registros ordenados por {sort_info}:')  # incluir criterio
-    else:
-        print(f'Mostrando todos los {total_records:,} registros de la base de datos:')  # formato original
+    
+    # determinamos cuántos registros vamos a mostrar
+    if n is None:  # si no especificaron cantidad, mostramos todos
+        records_to_show = total_records
+        if sort_info:
+            print(f'Mostrando todos los {total_records:,} registros ordenados por {sort_info}:')  # incluir criterio
+        else:
+            print(f'Mostrando todos los {total_records:,} registros de la base de datos:')  # formato original
+    else:  # si especificaron una cantidad
+        records_to_show = min(n, total_records)  # no podemos mostrar más de los que tenemos
+        if sort_info:
+            print(f'Mostrando los primeros {records_to_show:,} de {total_records:,} registros ordenados por {sort_info}:')  # incluir criterio
+        else:
+            print(f'Mostrando los primeros {records_to_show:,} de {total_records:,} registros de la base de datos:')  # formato original
+    
     print('=' * 100)  # línea separadora más visible
     
     i = 0  # llevamos la cuenta de cuántos hemos mostrado
     start_time = time.time()  # medimos tiempo para bases grandes
     
-    for rec in ll:  # recorremos cada registro sin excepción
+    for rec in ll:  # recorremos cada registro
+        if i >= records_to_show:  # si ya mostramos la cantidad solicitada
+            break  # paramos aquí
         i += 1  # aumentamos el contador
         print(f'{i:8,d}: {str(rec)}')  # formato con comas para números grandes
         
-        # mostrar progreso cada 1000 registros en bases grandes
-        if total_records > 1000 and i % 1000 == 0:
+        # mostrar progreso cada 1000 registros en bases grandes (solo si mostramos muchos)
+        if records_to_show > 1000 and i % 1000 == 0:
             elapsed = time.time() - start_time
-            print(f'[PROGRESO: {i:,}/{total_records:,} registros mostrados - {elapsed:.1f}s transcurridos]')
+            print(f'[PROGRESO: {i:,}/{records_to_show:,} registros mostrados - {elapsed:.1f}s transcurridos]')
     
     elapsed_total = time.time() - start_time
     print('=' * 100)  # línea separadora final
-    if sort_info:
-        print(f'RESUMEN: {i:,} registros ordenados por {sort_info} mostrados en {elapsed_total:.2f} segundos')  # incluir criterio
-    else:
-        print(f'RESUMEN: {i:,} registros mostrados completamente en {elapsed_total:.2f} segundos')  # resumen original
+    if n is None:  # si mostramos todos
+        if sort_info:
+            print(f'RESUMEN: {i:,} registros ordenados por {sort_info} mostrados completamente en {elapsed_total:.2f} segundos')  # incluir criterio
+        else:
+            print(f'RESUMEN: {i:,} registros mostrados completamente en {elapsed_total:.2f} segundos')  # resumen original
+    else:  # si mostramos solo una cantidad limitada
+        if sort_info:
+            print(f'RESUMEN: {i:,} de {total_records:,} registros ordenados por {sort_info} mostrados en {elapsed_total:.2f} segundos')  # incluir criterio
+        else:
+            print(f'RESUMEN: {i:,} de {total_records:,} registros mostrados en {elapsed_total:.2f} segundos')  # resumen original
 
 
 def search_by_field_in_tree(tree: AVLTree, field_name, value):
@@ -587,16 +606,16 @@ def interactive_menu():
             print('Opcion no valida')
 
 
-if __name__ == '__main__':
-    if '--test' in sys.argv:
-        sample = os.path.join(os.path.dirname(__file__), 'sample.csv')
-        if os.path.exists(sample):
-            t, ll, s, q, stats = load_csv(sample)
-            print('Carga sample:', stats)
-            print('Primeros 3 por ID:')
-            sorted_ll = merge_sort_linkedlist(ll, lambda r: r.customer_id)
-            print_first_n_from_list(sorted_ll, 3)
-        else:
-            print('No hay sample.csv; ejecuta main sin --test para usar el menu')
-    else:
-        interactive_menu()
+if __name__ == '__main__':  # esta línea se ejecuta solo cuando corremos este archivo directamente
+    if '--test' in sys.argv:  # si el usuario pasó el parámetro --test al ejecutar
+        sample = os.path.join(os.path.dirname(__file__), 'sample.csv')  # buscamos un archivo de prueba
+        if os.path.exists(sample):  # si existe el archivo de muestra
+            t, ll, s, q, stats = load_csv(sample)  # cargamos los datos de prueba
+            print('Carga sample:', stats)  # mostramos las estadísticas de la carga
+            print('Primeros 3 por ID:')  # anunciamos que vamos a mostrar los primeros 3
+            sorted_ll = merge_sort_linkedlist(ll, lambda r: r.customer_id)  # ordenamos por ID
+            print_first_n_from_list(sorted_ll, 3)  # mostramos solo los primeros 3 registros
+        else:  # si no existe el archivo de prueba
+            print('No hay sample.csv; ejecuta main sin --test para usar el menu')  # informamos al usuario
+    else:  # si no se pasó --test (ejecución normal)
+        interactive_menu()  # iniciamos el menú interactivo principal

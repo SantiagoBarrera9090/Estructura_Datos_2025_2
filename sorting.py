@@ -17,27 +17,27 @@ def _normalize_key(keyfn, record):
     - Si algo está roto, lo ponemos al final
     """
     try:
-        v = keyfn(record)
+        v = keyfn(record)  # intentamos extraer el valor usando la función que nos dieron
     except Exception:
-        return (2, "")
-    if v is None:
-        return (2, "")
+        return (2, "")  # si algo sale mal, ponemos este registro al final
+    if v is None:  # si el valor es nulo
+        return (2, "")  # también lo ponemos al final
     # Import local para evitar dependencia global
-    from datetime import date, datetime
+    from datetime import date, datetime  # importamos tipos de fecha cuando los necesitamos
 
-    if isinstance(v, (int, float)):
-        return (0, v)
-    if isinstance(v, (date, datetime)):
-        return (0, v)
+    if isinstance(v, (int, float)):  # si es un número
+        return (0, v)  # lo ponemos en la categoría 0 (primero)
+    if isinstance(v, (date, datetime)):  # si es una fecha
+        return (0, v)  # también va en categoría 0 (se ordenan bien)
     # booleanes se tratan como ints
-    if isinstance(v, bool):
-        return (0, int(v))
+    if isinstance(v, bool):  # si es verdadero/falso
+        return (0, int(v))  # lo convertimos a número (False=0, True=1)
     # por defecto, tratamos como string
     try:
-        s = str(v).lower()
-        return (1, s)
+        s = str(v).lower()  # convertimos a texto en minúsculas
+        return (1, s)  # va en categoría 1 (después de los números)
     except Exception:
-        return (2, "")
+        return (2, "")  # si no se puede convertir, va al final
 
 
 def split_linkedlist(ll: LinkedList):
@@ -46,56 +46,56 @@ def split_linkedlist(ll: LinkedList):
     Nota: esto no modifica los datos originales; construye dos nuevas listas
     que contienen los mismos elementos referenciados.
     """
-    if ll.head is None or ll.head.next is None:
-        left = LinkedList()
-        cur = ll.head
-        while cur:
-            left.append(cur.data)
-            cur = cur.next
-        right = LinkedList()
-        return left, right
+    if ll.head is None or ll.head.next is None:  # si la lista está vacía o tiene solo un elemento
+        left = LinkedList()  # creamos una lista vacía para la izquierda
+        cur = ll.head  # empezamos desde el primer elemento
+        while cur:  # mientras haya elementos
+            left.append(cur.data)  # copiamos cada elemento a la lista izquierda
+            cur = cur.next  # pasamos al siguiente
+        right = LinkedList()  # la lista derecha queda vacía
+        return left, right  # devolvemos las dos mitades
 
-    slow = ll.head
-    fast = ll.head
-    while fast.next and fast.next.next:
-        slow = slow.next
-        fast = fast.next.next
+    slow = ll.head  # puntero lento: avanza de uno en uno
+    fast = ll.head  # puntero rápido: avanza de dos en dos
+    while fast.next and fast.next.next:  # mientras el rápido pueda avanzar dos pasos
+        slow = slow.next  # el lento avanza uno
+        fast = fast.next.next  # el rápido avanza dos
 
     # slow queda al final de la primera mitad
-    left = LinkedList()
-    cur = ll.head
-    while cur is not None and cur is not slow.next:
-        left.append(cur.data)
-        cur = cur.next
+    left = LinkedList()  # creamos la lista para la primera mitad
+    cur = ll.head  # empezamos desde el principio
+    while cur is not None and cur is not slow.next:  # hasta donde marca el puntero lento
+        left.append(cur.data)  # copiamos elementos a la primera mitad
+        cur = cur.next  # avanzamos
 
-    right = LinkedList()
-    cur = slow.next
-    while cur:
-        right.append(cur.data)
-        cur = cur.next
+    right = LinkedList()  # creamos la lista para la segunda mitad
+    cur = slow.next  # empezamos desde donde terminó la primera mitad
+    while cur:  # hasta el final
+        right.append(cur.data)  # copiamos elementos a la segunda mitad
+        cur = cur.next  # avanzamos
 
-    return left, right
+    return left, right  # devolvemos las dos mitades
 
 
 def merge_sorted(left: LinkedList, right: LinkedList, keyfn):
     """Fusiona dos listas ya ordenadas según keyfn."""
-    result = LinkedList()
-    a = left.head
-    b = right.head
-    while a and b:
-        if _normalize_key(keyfn, a.data) <= _normalize_key(keyfn, b.data):
-            result.append(a.data)
-            a = a.next
-        else:
-            result.append(b.data)
-            b = b.next
-    while a:
-        result.append(a.data)
-        a = a.next
-    while b:
-        result.append(b.data)
-        b = b.next
-    return result
+    result = LinkedList()  # creamos una nueva lista para el resultado
+    a = left.head  # puntero al primer elemento de la lista izquierda
+    b = right.head  # puntero al primer elemento de la lista derecha
+    while a and b:  # mientras tengamos elementos en ambas listas
+        if _normalize_key(keyfn, a.data) <= _normalize_key(keyfn, b.data):  # si el elemento de la izquierda es menor o igual
+            result.append(a.data)  # lo agregamos al resultado
+            a = a.next  # avanzamos en la lista izquierda
+        else:  # si el elemento de la derecha es menor
+            result.append(b.data)  # lo agregamos al resultado
+            b = b.next  # avanzamos en la lista derecha
+    while a:  # si quedan elementos en la lista izquierda
+        result.append(a.data)  # los agregamos todos
+        a = a.next  # avanzamos
+    while b:  # si quedan elementos en la lista derecha
+        result.append(b.data)  # los agregamos todos
+        b = b.next  # avanzamos
+    return result  # devolvemos la lista fusionada y ordenada
 
 
 def merge_sort_linkedlist(ll: LinkedList, keyfn=lambda r: r.customer_id):
