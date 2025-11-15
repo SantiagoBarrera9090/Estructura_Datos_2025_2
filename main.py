@@ -13,7 +13,6 @@ from datetime import datetime  # para manejo de fechas
 from models import Record  # clase Record para representar cada fila del CSV
 from structures import LinkedList, Stack, Queue, AVLTree  # estructuras propias del proyecto
 from sorting import merge_sort_linkedlist, quick_sort_linkedlist  # algoritmos de ordenamiento locales
-import time  # medición de tiempos para operaciones
 
 
 
@@ -115,7 +114,7 @@ def load_csv(path, tree_keyfn=None):
 
 
 
-def print_first_n_from_list(ll: LinkedList, n=None):
+def print_first_n_from_list(ll: LinkedList, n=None, sort_info=None):
     # Esta función muestra todos los registros adaptandose al tamaño de la base de datos
     # Optimizada para manejar desde 100 hasta millones de registros
     if ll is None or ll.size() == 0:
@@ -123,7 +122,10 @@ def print_first_n_from_list(ll: LinkedList, n=None):
         return
     
     total_records = ll.size()  # obtenemos el total para optimizar
-    print(f'Mostrando todos los {total_records:,} registros de la base de datos:')  # formato con comas
+    if sort_info:
+        print(f'Mostrando todos los {total_records:,} registros ordenados por {sort_info}:')  # incluir criterio
+    else:
+        print(f'Mostrando todos los {total_records:,} registros de la base de datos:')  # formato original
     print('=' * 100)  # línea separadora más visible
     
     i = 0  # llevamos la cuenta de cuántos hemos mostrado
@@ -140,7 +142,10 @@ def print_first_n_from_list(ll: LinkedList, n=None):
     
     elapsed_total = time.time() - start_time
     print('=' * 100)  # línea separadora final
-    print(f'RESUMEN: {i:,} registros mostrados completamente en {elapsed_total:.2f} segundos')  # resumen con tiempo
+    if sort_info:
+        print(f'RESUMEN: {i:,} registros ordenados por {sort_info} mostrados en {elapsed_total:.2f} segundos')  # incluir criterio
+    else:
+        print(f'RESUMEN: {i:,} registros mostrados completamente en {elapsed_total:.2f} segundos')  # resumen original
 
 
 def search_by_field_in_tree(tree: AVLTree, field_name, value):
@@ -310,31 +315,41 @@ def interactive_menu():
             print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')  # informar resultado completo
             # mostrar todos los registros resultantes para verificar el ordenamiento completo
             print('\nTodos los registros despues de ordenar por Customer ID:')
-            print_first_n_from_list(ll, None)  # imprimir todos los registros sin limitación
-        elif opt == '2' or opt == '3':
-            # opciones 2 y 3: 2=First Name (merge), 3=Subscription Date (quick)
+            print_first_n_from_list(ll, None, 'Customer ID (merge sort)')  # incluir información del ordenamiento
+        elif opt == '2':
+            # Ordenar por First Name usando merge sort
             if ll is None:
                 print('Primero cargue la base (cargue el archivo al iniciar)')  # verificar datos cargados
                 continue
-            if opt == '2':
-                field = 'first_name'  # ordenar por nombre
-                keyfn = lambda r: getattr(r, field, None)
-                ll = merge_sort_linkedlist(ll, keyfn)  # merge sort para nombres
-                last_sort_field = field
-                sort_name = 'First Name (merge sort)'
-            else:
-                field = 'subscription_date'  # ordenar por fecha de suscripción
-                keyfn = lambda r: getattr(r, field, None)
-                ll = quick_sort_linkedlist(ll, keyfn)  # quick sort para fechas
-                last_sort_field = field
-                sort_name = 'Subscription Date (quick sort)'
+            field = 'first_name'  # ordenar por nombre
+            keyfn = lambda r: getattr(r, field, None)
+            ll = merge_sort_linkedlist(ll, keyfn)  # merge sort para nombres
+            last_sort_field = field
+            sort_name = 'First Name (merge sort)'
             # construyo tambien el arbol para la opcion 8
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
             for rec in ll:
                 tree_for_last_sort.insert(rec)  # poblar índice con orden actual
             print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
-            print('\nTodos los registros despues de ordenar:')
-            print_first_n_from_list(ll, None)  # mostrar todos los registros completos
+            print('\nTodos los registros despues de ordenar por First Name:')
+            print_first_n_from_list(ll, None, sort_name)  # mostrar con información de ordenamiento
+        elif opt == '3':
+            # Ordenar por Subscription Date usando quick sort
+            if ll is None:
+                print('Primero cargue la base (cargue el archivo al iniciar)')  # verificar datos cargados
+                continue
+            field = 'subscription_date'  # ordenar por fecha de suscripción
+            keyfn = lambda r: getattr(r, field, None)
+            ll = quick_sort_linkedlist(ll, keyfn)  # quick sort para fechas
+            last_sort_field = field
+            sort_name = 'Subscription Date (quick sort)'
+            # construyo tambien el arbol para la opcion 8
+            tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
+            for rec in ll:
+                tree_for_last_sort.insert(rec)  # poblar índice con orden actual
+            print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
+            print('\nTodos los registros despues de ordenar por Subscription Date:')
+            print_first_n_from_list(ll, None, sort_name)  # mostrar con información de ordenamiento
         elif opt == '4':
             # Ordenar por Country
             if ll is None:
@@ -349,7 +364,7 @@ def interactive_menu():
                 tree_for_last_sort.insert(rec)
             print(f'Ordenado por Country (merge sort). Total registros: {ll.size()}')
             print('\nTodos los registros despues de ordenar por pais:')
-            print_first_n_from_list(ll, None)  # mostrar la base de datos completa ordenada
+            print_first_n_from_list(ll, None, 'Country (merge sort)')  # incluir información del ordenamiento
         elif opt == '5':
             # Mostrar primeros n registros o todos
             if ll is None:
@@ -366,7 +381,18 @@ def interactive_menu():
                 except Exception:
                     print('Entrada invalida, mostrando todos')
                     n = None
-            print_first_n_from_list(ll, n)  # imprimir según elección
+            # Determinar información del último ordenamiento
+            if last_sort_field:
+                sort_methods = {
+                    'customer_id': 'Customer ID (merge sort)',
+                    'first_name': 'First Name (merge sort)', 
+                    'subscription_date': 'Subscription Date (quick sort)',
+                    'country': 'Country (merge sort)'
+                }
+                sort_info = sort_methods.get(last_sort_field, f'{last_sort_field} (ordenamiento aplicado)')
+            else:
+                sort_info = None
+            print_first_n_from_list(ll, n, sort_info)  # imprimir con información de ordenamiento
         elif opt == '6':
             # Buscar cliente por varios campos con comparación de tiempos
             if ll is None or tree is None or stk is None or q is None:
