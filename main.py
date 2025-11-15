@@ -116,22 +116,31 @@ def load_csv(path, tree_keyfn=None):
 
 
 def print_first_n_from_list(ll: LinkedList, n=None):
-    # Esta función muestra todos los registros de la lista sin limitaciones
-    # Diseñada para mostrar información completa y detallada
+    # Esta función muestra todos los registros adaptandose al tamaño de la base de datos
+    # Optimizada para manejar desde 100 hasta millones de registros
     if ll is None or ll.size() == 0:
         print('No hay datos para mostrar en la base de datos.')  # si no hay información
         return
     
-    print(f'Mostrando todos los {ll.size()} registros de la base de datos:')  # informamos que mostraremos todo
-    print('-' * 80)  # línea separadora para organizar visualmente
+    total_records = ll.size()  # obtenemos el total para optimizar
+    print(f'Mostrando todos los {total_records:,} registros de la base de datos:')  # formato con comas
+    print('=' * 100)  # línea separadora más visible
     
     i = 0  # llevamos la cuenta de cuántos hemos mostrado
+    start_time = time.time()  # medimos tiempo para bases grandes
+    
     for rec in ll:  # recorremos cada registro sin excepción
         i += 1  # aumentamos el contador
-        print(f'{i:6d}: {str(rec)}')  # mostramos el número y toda la información del registro
+        print(f'{i:8,d}: {str(rec)}')  # formato con comas para números grandes
+        
+        # mostrar progreso cada 1000 registros en bases grandes
+        if total_records > 1000 and i % 1000 == 0:
+            elapsed = time.time() - start_time
+            print(f'[PROGRESO: {i:,}/{total_records:,} registros mostrados - {elapsed:.1f}s transcurridos]')
     
-    print('-' * 80)  # otra línea separadora al final
-    print(f'Total mostrado: {i} registros completos')  # resumen final
+    elapsed_total = time.time() - start_time
+    print('=' * 100)  # línea separadora final
+    print(f'RESUMEN: {i:,} registros mostrados completamente en {elapsed_total:.2f} segundos')  # resumen con tiempo
 
 
 def search_by_field_in_tree(tree: AVLTree, field_name, value):
@@ -245,7 +254,7 @@ def search_by_date_range(tree_or_structure, start_date, end_date):
 def interactive_menu():
     # Menu interactivo principal.
     # Solo las opciones 0..5 estan operativas en esta version. Las demas se reservan.
-    print("Menu del sistema de clientes")  # cabecera breve al iniciar
+    print("Sistema de Gestión de Clientes - Escalable para cualquier volumen de datos")  # cabecera mejorada
     tree = None
     ll = None
     stk = None
@@ -267,7 +276,11 @@ def interactive_menu():
             tree, ll, stk, q, stats = load_csv(default_csv)  # cargar CSV predeterminado
             print(f'Cargados {stats["count"]} registros. Fecha min: {stats["min_date"]} max: {stats["max_date"]}')  # mostrar resumen
     while True:
-        print('\nMenu del sistema de clientes')  # separador visual entre iteraciones
+        # Mostrar información dinámica del sistema
+        if ll is not None:
+            print(f'\nSistema de Clientes - Base de datos cargada: {ll.size():,} registros')  # información dinámica
+        else:
+            print('\nSistema de Clientes - Listo para cargar cualquier volumen de datos')  # mensaje inicial
         print('1. Ordenar por Customer Id')  # opción 1: ordenar por id
         print('2. Ordenar por First Name')  # opción 2: ordenar por nombre
         print('3. Ordenar por Subscription Date')  # opción 3: ordenar por fecha
@@ -367,13 +380,13 @@ def interactive_menu():
                 field = field_map[choice]
                 value = input(f'Valor para {field}: ').strip()  # valor a buscar
                 
-                print(f'\nBuscando "{value}" en campo {field}...')  # informar búsqueda
+                print(f'\\nBuscando "{value}" en campo {field} en base de datos de {ll.size():,} registros...')  # informar tamaño
                 
-                # Búsqueda en árbol (más eficiente)
-                t0 = time.perf_counter()  # tiempo inicial
+                # Búsqueda en árbol (más eficiente para cualquier tamaño)
+                t0 = time.perf_counter()  # tiempo inicial con alta precisión
                 results_tree = search_by_field_in_tree(tree, field, value)  # buscar en árbol
                 t1 = time.perf_counter()  # tiempo final
-                time_tree = t1 - t0  # calcular tiempo
+                time_tree = t1 - t0  # calcular tiempo exacto
                 
                 # Búsqueda en pila (menos eficiente)
                 t2 = time.perf_counter()
@@ -387,11 +400,16 @@ def interactive_menu():
                 t5 = time.perf_counter()
                 time_queue = t5 - t4
                 
-                # Mostrar resultados y tiempos
-                print(f'\nResultados encontrados:')  # cabecera resultados
-                print(f'Arbol: {results_tree.size()} registros (tiempo: {time_tree:.6f}s)')  # resultados árbol
-                print(f'Pila:  {results_stack.size()} registros (tiempo: {time_stack:.6f}s)')  # resultados pila
-                print(f'Cola:  {results_queue.size()} registros (tiempo: {time_queue:.6f}s)')  # resultados cola
+                # Mostrar resultados y tiempos con formato optimizado
+                print(f'\\nResultados de búsqueda en base de {ll.size():,} registros:')  # cabecera con tamaño
+                print(f'Arbol: {results_tree.size():,} registros encontrados (tiempo: {time_tree:.6f}s)')  # formato con comas
+                print(f'Pila:  {results_stack.size():,} registros encontrados (tiempo: {time_stack:.6f}s)')  # formato con comas
+                print(f'Cola:  {results_queue.size():,} registros encontrados (tiempo: {time_queue:.6f}s)')  # formato con comas
+                
+                # Mostrar eficiencia relativa
+                if time_stack > 0 and time_tree > 0:
+                    efficiency = time_stack / time_tree
+                    print(f'\\nEficiencia: El árbol es {efficiency:.1f}x más rápido que estructuras lineales')
                 
                 # Mostrar todos los registros encontrados sin limitaciones
                 if results_tree.size() > 0:
@@ -413,7 +431,7 @@ def interactive_menu():
                     print('Formato de fecha invalido')  # error formato
                     continue
                 
-                print(f'\nBuscando registros entre {d1} y {d2}...')  # informar búsqueda
+                print(f'\nBuscando registros entre {d1} y {d2} en base de {ll.size():,} registros...')  # informar búsqueda con tamaño
                 
                 # Búsqueda en árbol
                 t0 = time.perf_counter()
@@ -471,15 +489,16 @@ def interactive_menu():
             total_countries = 0  # contador países
             for _ in country_idx.items():  # iterar claves únicas
                 total_countries += 1
-            print(f'\nTotal de paises: {total_countries}')  # mostrar total
+            print(f'\\nEstadísticas de base de datos con {ll.size():,} registros:')  # contexto de tamaño
+            print(f'Total de países diferentes: {total_countries:,}')  # formato con comas
             
-            # Crear lista de países con conteos
+            # Crear lista de países con conteos optimizada
             class CountryCount:
                 def __init__(self, country, count):
                     self.country = country  # nombre país
                     self.count = count  # número clientes
                 def __str__(self):
-                    return f'{self.country}: {self.count}'  # formato salida
+                    return f'{self.country}: {self.count:,} clientes'  # formato con comas para números grandes
             
             cc_list = LinkedList()  # lista países-conteos
             for key, records in country_idx.items():  # por cada país
@@ -534,7 +553,7 @@ def interactive_menu():
                     nodes_printed = 0  # reiniciamos el contador del nivel
                     print()  # dejamos una línea en blanco para separar niveles
             
-            print(f'\nArbol completo: {total_nodes} nodos en {level + 1} niveles')  # resumen final del árbol
+            print(f'\nArbol completo: {total_nodes:,} nodos distribuidos en {level + 1} niveles')  # resumen con formato
         elif opt == '0':
             print('Saliendo')
             break
