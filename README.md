@@ -125,13 +125,27 @@ Permite búsquedas por:
 | Ordenamiento | - | O(n log n) | - |
 | Recorrido por niveles | O(n) | - | - |
 
+## Características Especiales ⭐
+
+### ✅ Sin Limitaciones de Visualización
+- **Muestra TODA la información** sin restricciones
+- **No hay límites** en número de registros mostrados
+- **Información completa** en todas las operaciones
+- **Datos exhaustivos** en búsquedas y estadísticas
+
+### ✅ Comentarios Naturales
+- Comentarios escritos en **lenguaje natural y comprensible**
+- Explicaciones **línea por línea** de cada operación
+- Documentación **fácil de entender** sin tecnicismos excesivos
+- Código **autodocumentado** para facilitar el aprendizaje
+
 ## Ejecución
 
 ```bash
 python main.py
 ```
 
-El sistema detectará automáticamente el archivo `BusinessData.csv` y ofrecerá cargarlo. Una vez cargado, todas las opciones del menú 0-8 estarán completamente funcionales.
+El sistema detectará automáticamente el archivo `BusinessData.csv` y ofrecerá cargarlo. Una vez cargado, todas las opciones del menú 0-8 estarán completamente funcionales **mostrando toda la información sin limitaciones**.
 
 ## Pruebas
 
