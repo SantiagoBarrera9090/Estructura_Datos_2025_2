@@ -282,3 +282,22 @@ class AVLTree:
             yield from _in(node.right)
 
         yield from _in(self.root)
+
+    def level_order(self):
+        # Recorrido por niveles del árbol binario
+        # Retorna generator que itera (key, records) por niveles
+        if not self.root:  # árbol vacío
+            return
+        
+        # Usar Queue para recorrido por niveles
+        q = Queue()  # cola de nodos por procesar
+        q.enqueue(self.root)  # agregar raíz
+        
+        while not q.is_empty():  # mientras haya nodos
+            node = q.dequeue()  # obtener siguiente nodo
+            yield (node.key, node.records)  # devolver clave y registros
+            
+            if node.left:  # si tiene hijo izquierdo
+                q.enqueue(node.left)  # agregar a cola
+            if node.right:  # si tiene hijo derecho
+                q.enqueue(node.right)  # agregar a cola

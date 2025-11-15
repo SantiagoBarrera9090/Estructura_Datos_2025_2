@@ -8,6 +8,8 @@ acentos para compatibilidad con consolas en Windows.
 import sys  # acceso a argumentos y control del intérprete
 import os  # operaciones de sistema de archivos
 import csv  # lectura de ficheros CSV
+import time  # para medir tiempos de ejecución
+from datetime import datetime  # para manejo de fechas
 from models import Record  # clase Record para representar cada fila del CSV
 from structures import LinkedList, Stack, Queue, AVLTree  # estructuras propias del proyecto
 from sorting import merge_sort_linkedlist, quick_sort_linkedlist  # algoritmos de ordenamiento locales
@@ -124,8 +126,112 @@ def print_first_n_from_list(ll: LinkedList, n=None):
         i += 1
 
 
-# Las funciones de busqueda avanzadas y de rango de fechas se eliminaron
-# en esta version para limitar la entrega a las operaciones 0..5.
+def search_by_field_in_tree(tree: AVLTree, field_name, value):
+    # Busca registros en un AVLTree por un campo concreto usando predicado
+    # Devuelve una LinkedList con los registros que coinciden exactamente
+    def pred(r):
+        v = getattr(r, field_name, None)  # obtener valor del campo
+        if v is None:
+            return False
+        try:
+            return str(v).lower() == str(value).lower()  # comparación case-insensitive
+        except Exception:
+            return False
+
+    out = LinkedList()  # lista resultado
+    for r in tree.find_by_predicate(pred):  # usar predicado del AVLTree
+        out.append(r)
+    return out
+
+
+def search_by_field_in_stack(stk: Stack, field_name, value):
+    # Busca registros iterando una Stack completa (destructiva)
+    # Restaura la pila al estado original después de la búsqueda
+    temp_stack = Stack()  # pila temporal para restaurar
+    out = LinkedList()  # resultados
+    
+    # Desapilar todos los elementos buscando coincidencias
+    while not stk.is_empty():
+        rec = stk.pop()  # extraer elemento
+        temp_stack.push(rec)  # guardar para restaurar
+        
+        v = getattr(rec, field_name, None)
+        try:
+            if v and str(v).lower() == str(value).lower():
+                out.append(rec)  # agregar si coincide
+        except Exception:
+            continue
+    
+    # Restaurar pila original
+    while not temp_stack.is_empty():
+        stk.push(temp_stack.pop())
+    
+    return out
+
+
+def search_by_field_in_queue(q: Queue, field_name, value):
+    # Busca registros iterando una Queue completa (destructiva)
+    # Restaura la cola al estado original después de la búsqueda
+    temp_list = LinkedList()  # lista temporal para elementos
+    out = LinkedList()  # resultados
+    
+    # Desencolar todos los elementos
+    while not q.is_empty():
+        rec = q.dequeue()  # extraer elemento
+        temp_list.append(rec)  # guardar para restaurar
+        
+        v = getattr(rec, field_name, None)
+        try:
+            if v and str(v).lower() == str(value).lower():
+                out.append(rec)  # agregar si coincide
+        except Exception:
+            continue
+    
+    # Restaurar cola original
+    for rec in temp_list:
+        q.enqueue(rec)
+    
+    return out
+
+
+def search_by_date_range(tree_or_structure, start_date, end_date):
+    # Busca registros por rango de fechas de suscripción
+    # Acepta AVLTree, Stack, Queue o LinkedList
+    out = LinkedList()  # resultados
+
+    def check(r):
+        if not r.subscription_date:  # si no tiene fecha
+            return False
+        return start_date <= r.subscription_date <= end_date  # verificar rango
+
+    if hasattr(tree_or_structure, 'find_by_predicate'):  # es AVLTree
+        for r in tree_or_structure.find_by_predicate(check):
+            out.append(r)
+    elif isinstance(tree_or_structure, Stack):  # es Stack
+        temp_stack = Stack()
+        while not tree_or_structure.is_empty():
+            rec = tree_or_structure.pop()
+            temp_stack.push(rec)
+            if check(rec):
+                out.append(rec)
+        # Restaurar stack
+        while not temp_stack.is_empty():
+            tree_or_structure.push(temp_stack.pop())
+    elif isinstance(tree_or_structure, Queue):  # es Queue
+        temp_list = LinkedList()
+        while not tree_or_structure.is_empty():
+            rec = tree_or_structure.dequeue()
+            temp_list.append(rec)
+            if check(rec):
+                out.append(rec)
+        # Restaurar queue
+        for rec in temp_list:
+            tree_or_structure.enqueue(rec)
+    else:  # es LinkedList u otra estructura iterable
+        for r in tree_or_structure:
+            if check(r):
+                out.append(r)
+    return out
 
 
 def interactive_menu():
@@ -143,6 +249,7 @@ def interactive_menu():
     last_sort_field = None
     # arbol construido con la clave del ultimo orden (para opcion 8)
     tree_for_last_sort = None
+    tree_for_last_sort = None
 
     # si existe BusinessData.csv en el folder, preguntamos si cargarla al inicio
     default_csv = os.path.join(os.path.dirname(__file__), 'BusinessData.csv')  # ruta por defecto
@@ -159,6 +266,10 @@ def interactive_menu():
         print('4. Ordenar por Country')  # opción 4: ordenar por país
         print('5. Mostrar primeros n registros ordenados con todos sus datos o todos los registros')  # opción 5: mostrar registros
         print('   (El menu preguntara el numero de registros o una opcion para mostrarlos todos)')  # aclaración para opción 5
+        print('6. Buscar cliente por First Name, Last Name, Company, rango de fechas de suscripcion o Country')  # opción 6: búsquedas
+        print('   (Se mostraran los tiempos de busqueda usando el arbol y usando la pila/cola)')  # aclaración tiempos
+        print('7. Mostrar estadisticas basicas')  # opción 7: estadísticas
+        print('8. Mostrar arbol binario')  # opción 8: visualización árbol
         print('0. Salir')  # opción 0: salir del programa
         opt = input('Seleccione una opcion: ').strip()  # leer la opción seleccionada por el usuario
         if opt == '1':
@@ -235,7 +346,203 @@ def interactive_menu():
                     print('Entrada invalida, mostrando todos')
                     n = None
             print_first_n_from_list(ll, n)  # imprimir según elección
-        # Opciones 6..9 fueron eliminadas en esta versión; solo 0..5 permanecen.
+        elif opt == '6':
+            # Buscar cliente por varios campos con comparación de tiempos
+            if ll is None or tree is None or stk is None or q is None:
+                print('Primero cargue la base (cargue el archivo al iniciar)')  # verificar datos
+                continue
+            
+            choice = input('Buscar por (1)first_name (2)last_name (3)company (4)country (5)rango_fechas: ').strip()  # tipo búsqueda
+            
+            if choice in ('1','2','3','4'):  # búsqueda por campo
+                field_map = {'1':'first_name','2':'last_name','3':'company','4':'country'}  # mapeo opción->campo
+                field = field_map[choice]
+                value = input(f'Valor para {field}: ').strip()  # valor a buscar
+                
+                print(f'\nBuscando "{value}" en campo {field}...')  # informar búsqueda
+                
+                # Búsqueda en árbol (más eficiente)
+                t0 = time.perf_counter()  # tiempo inicial
+                results_tree = search_by_field_in_tree(tree, field, value)  # buscar en árbol
+                t1 = time.perf_counter()  # tiempo final
+                time_tree = t1 - t0  # calcular tiempo
+                
+                # Búsqueda en pila (menos eficiente)
+                t2 = time.perf_counter()
+                results_stack = search_by_field_in_stack(stk, field, value)  # buscar en pila
+                t3 = time.perf_counter()
+                time_stack = t3 - t2
+                
+                # Búsqueda en cola (menos eficiente)
+                t4 = time.perf_counter()
+                results_queue = search_by_field_in_queue(q, field, value)  # buscar en cola
+                t5 = time.perf_counter()
+                time_queue = t5 - t4
+                
+                # Mostrar resultados y tiempos
+                print(f'\nResultados encontrados:')  # cabecera resultados
+                print(f'Arbol: {results_tree.size()} registros (tiempo: {time_tree:.6f}s)')  # resultados árbol
+                print(f'Pila:  {results_stack.size()} registros (tiempo: {time_stack:.6f}s)')  # resultados pila
+                print(f'Cola:  {results_queue.size()} registros (tiempo: {time_queue:.6f}s)')  # resultados cola
+                
+                # Mostrar algunos registros encontrados
+                if results_tree.size() > 0:
+                    print(f'\nPrimeros registros encontrados:')  # cabecera preview
+                    count = 0
+                    for r in results_tree:
+                        if count >= 5:  # limitar a 5 registros
+                            break
+                        print(f'  {r}')  # mostrar registro
+                        count += 1
+                    if results_tree.size() > 5:
+                        print(f'  ... y {results_tree.size() - 5} más')
+                else:
+                    print('No se encontraron registros con ese criterio.')  # no hay resultados
+                    
+            elif choice == '5':  # búsqueda por rango de fechas
+                fmt = '%Y-%m-%d'  # formato fecha esperado
+                s1 = input('Fecha inicio (YYYY-MM-DD): ').strip()  # fecha inicio
+                s2 = input('Fecha fin (YYYY-MM-DD): ').strip()  # fecha fin
+                try:
+                    d1 = datetime.strptime(s1, fmt).date()  # parsear fecha inicio
+                    d2 = datetime.strptime(s2, fmt).date()  # parsear fecha fin
+                except Exception:
+                    print('Formato de fecha invalido')  # error formato
+                    continue
+                
+                print(f'\nBuscando registros entre {d1} y {d2}...')  # informar búsqueda
+                
+                # Búsqueda en árbol
+                t0 = time.perf_counter()
+                res_tree = search_by_date_range(tree, d1, d2)  # buscar en árbol
+                t1 = time.perf_counter()
+                time_tree = t1 - t0
+                
+                # Búsqueda en pila
+                t2 = time.perf_counter()
+                res_stack = search_by_date_range(stk, d1, d2)  # buscar en pila
+                t3 = time.perf_counter()
+                time_stack = t3 - t2
+                
+                # Búsqueda en cola
+                t4 = time.perf_counter()
+                res_queue = search_by_date_range(q, d1, d2)  # buscar en cola
+                t5 = time.perf_counter()
+                time_queue = t5 - t4
+                
+                # Mostrar resultados
+                print(f'\nRegistros en rango de fechas:')  # cabecera resultados
+                print(f'Arbol: {res_tree.size()} registros (tiempo: {time_tree:.6f}s)')  # resultados árbol
+                print(f'Pila:  {res_stack.size()} registros (tiempo: {time_stack:.6f}s)')  # resultados pila
+                print(f'Cola:  {res_queue.size()} registros (tiempo: {time_queue:.6f}s)')  # resultados cola
+                
+                # Preview de resultados
+                if res_tree.size() > 0:
+                    print(f'\nPrimeros registros en el rango:')  # cabecera preview
+                    count = 0
+                    for r in res_tree:
+                        if count >= 3:  # limitar a 3 registros
+                            break
+                        print(f'  {r}')  # mostrar registro
+                        count += 1
+                else:
+                    print('No hay registros en ese rango de fechas.')  # no hay resultados
+            else:
+                print('Opcion de busqueda no valida.')  # opción inválida
+                
+        elif opt == '7':
+            # Mostrar estadísticas básicas
+            if ll is None or stats is None:
+                print('Primero cargue la base (cargue el archivo al iniciar)')  # verificar datos
+                continue
+            
+            # Construir índice por país si no existe
+            if 'country' not in indices:
+                print('Construyendo indice por pais...')  # informar construcción
+                idx = AVLTree(keyfn=lambda r: getattr(r, 'country', None))  # crear índice
+                for rec in ll:  # poblar índice
+                    idx.insert(rec)
+                indices['country'] = idx  # guardar índice
+                print('Indice construido.')  # confirmar
+            
+            country_idx = indices['country']  # obtener índice
+            
+            # Contar países únicos
+            total_countries = 0  # contador países
+            for _ in country_idx.items():  # iterar claves únicas
+                total_countries += 1
+            print(f'\nTotal de paises: {total_countries}')  # mostrar total
+            
+            # Crear lista de países con conteos
+            class CountryCount:
+                def __init__(self, country, count):
+                    self.country = country  # nombre país
+                    self.count = count  # número clientes
+                def __str__(self):
+                    return f'{self.country}: {self.count}'  # formato salida
+            
+            cc_list = LinkedList()  # lista países-conteos
+            for key, records in country_idx.items():  # por cada país
+                cc_list.append(CountryCount(key, records.size()))  # agregar conteo
+            
+            # Ordenar por conteo descendente
+            cc_sorted = merge_sort_linkedlist(cc_list, keyfn=lambda x: -x.count)  # ordenar desc
+            
+            # Preguntar cuántos mostrar
+            choice = input('Cuantos paises mostrar? (numero o "todos"): ').strip()  # solicitar cantidad
+            if choice.lower() in ('todos', 'n', ''):
+                to_show = None  # mostrar todos
+            else:
+                try:
+                    to_show = int(choice)  # parsear número
+                    if to_show <= 0:
+                        to_show = None
+                except Exception:
+                    print('Entrada invalida, mostrando todos')  # error parsing
+                    to_show = None
+            
+            # Mostrar países y conteos
+            print('\nClientes por pais:')  # cabecera
+            i = 0
+            for item in cc_sorted:  # iterar países ordenados
+                if to_show is not None and i >= to_show:  # límite alcanzado
+                    break
+                print(f'  {item}')  # mostrar país:conteo
+                i += 1
+            
+            # Mostrar fechas extremas
+            if stats['min_date'] and stats['max_date']:  # si hay fechas
+                print(f'\nFecha mas antigua: {stats["min_date"]}')  # fecha mínima
+                print(f'Fecha mas reciente: {stats["max_date"]}')  # fecha máxima
+            else:
+                print('\nNo hay fechas de suscripcion validas en los datos.')  # sin fechas
+                
+        elif opt == '8':
+            # Mostrar árbol binario por niveles
+            if tree_for_last_sort is None:
+                print('No hay criterio de orden aplicado aun. Ordene por algun campo primero (opciones 1-4).')  # sin orden
+                continue
+            
+            print(f'\nArbol binario por niveles (ordenado por {last_sort_field}):')  # cabecera
+            print('Formato: clave - numero_de_registros')  # formato explicación
+            print('----------------------------------------')  # separador
+            
+            level = 0  # nivel actual
+            nodes_in_level = 1  # nodos esperados en nivel
+            nodes_printed = 0  # nodos impresos en nivel actual
+            
+            for key, records in tree_for_last_sort.level_order():  # recorrer por niveles
+                if nodes_printed == 0:  # inicio de nuevo nivel
+                    print(f'Nivel {level}:')  # cabecera nivel
+                
+                print(f'  {key} - {records.size()}')  # mostrar nodo
+                nodes_printed += 1  # incrementar contador
+                
+                if nodes_printed >= nodes_in_level:  # nivel completo
+                    level += 1  # siguiente nivel
+                    nodes_in_level *= 2  # doble nodos en siguiente nivel
+                    nodes_printed = 0  # reset contador
+                    print()  # línea vacía entre niveles
         elif opt == '0':
             print('Saliendo')
             break
