@@ -116,82 +116,90 @@ def load_csv(path, tree_keyfn=None):
 
 
 def print_first_n_from_list(ll: LinkedList, n=None):
-    # Imprime los primeros `n` registros de una LinkedList.
-    # Si n es None, imprime todos los registros.
-    i = 0
-    for rec in ll:
-        if n is not None and i >= n:
-            break
-        print(str(rec))
-        i += 1
+    # Esta función muestra todos los registros de la lista sin limitaciones
+    # Diseñada para mostrar información completa y detallada
+    if ll is None or ll.size() == 0:
+        print('No hay datos para mostrar en la base de datos.')  # si no hay información
+        return
+    
+    print(f'Mostrando todos los {ll.size()} registros de la base de datos:')  # informamos que mostraremos todo
+    print('-' * 80)  # línea separadora para organizar visualmente
+    
+    i = 0  # llevamos la cuenta de cuántos hemos mostrado
+    for rec in ll:  # recorremos cada registro sin excepción
+        i += 1  # aumentamos el contador
+        print(f'{i:6d}: {str(rec)}')  # mostramos el número y toda la información del registro
+    
+    print('-' * 80)  # otra línea separadora al final
+    print(f'Total mostrado: {i} registros completos')  # resumen final
 
 
 def search_by_field_in_tree(tree: AVLTree, field_name, value):
-    # Busca registros en un AVLTree por un campo concreto usando predicado
-    # Devuelve una LinkedList con los registros que coinciden exactamente
+    # Esta función busca clientes en el árbol binario por cualquier campo específico
+    # Es muy eficiente porque aprovecha la estructura del árbol para buscar rápidamente
     def pred(r):
-        v = getattr(r, field_name, None)  # obtener valor del campo
-        if v is None:
-            return False
+        v = getattr(r, field_name, None)  # extraemos el valor del campo que nos interesa del registro
+        if v is None:  # si el campo no existe o está vacío
+            return False  # este registro no nos sirve
         try:
-            return str(v).lower() == str(value).lower()  # comparación case-insensitive
-        except Exception:
-            return False
+            return str(v).lower() == str(value).lower()  # comparamos ignorando mayúsculas y minúsculas
+        except Exception:  # por si hay algún problema con la conversión
+            return False  # mejor no incluir este registro
 
-    out = LinkedList()  # lista resultado
-    for r in tree.find_by_predicate(pred):  # usar predicado del AVLTree
-        out.append(r)
-    return out
+    out = LinkedList()  # creamos una lista nueva para guardar todos los resultados
+    for r in tree.find_by_predicate(pred):  # le pedimos al árbol que nos dé todos los que cumplen la condición
+        out.append(r)  # agregamos cada resultado a nuestra lista
+    return out  # devolvemos todos los registros que encontramos
 
 
 def search_by_field_in_stack(stk: Stack, field_name, value):
-    # Busca registros iterando una Stack completa (destructiva)
-    # Restaura la pila al estado original después de la búsqueda
-    temp_stack = Stack()  # pila temporal para restaurar
-    out = LinkedList()  # resultados
+    # Esta función busca en la pila pero es más lenta que el árbol
+    # Tiene que revisar elemento por elemento desde arriba hasta abajo
+    temp_stack = Stack()  # necesitamos otra pila para no perder los datos originales
+    out = LinkedList()  # aquí vamos guardando lo que encontramos
     
-    # Desapilar todos los elementos buscando coincidencias
-    while not stk.is_empty():
-        rec = stk.pop()  # extraer elemento
-        temp_stack.push(rec)  # guardar para restaurar
+    # Sacamos todos los elementos de la pila original para revisarlos
+    while not stk.is_empty():  # mientras queden elementos por revisar
+        rec = stk.pop()  # sacamos el que está arriba
+        temp_stack.push(rec)  # lo guardamos en la pila temporal para no perderlo
         
-        v = getattr(rec, field_name, None)
+        v = getattr(rec, field_name, None)  # obtenemos el valor del campo a buscar
         try:
-            if v and str(v).lower() == str(value).lower():
-                out.append(rec)  # agregar si coincide
-        except Exception:
-            continue
+            if v and str(v).lower() == str(value).lower():  # si coincide con lo que buscamos
+                out.append(rec)  # lo agregamos a los resultados
+        except Exception:  # si hay algún error
+            continue  # seguimos con el siguiente
     
-    # Restaurar pila original
-    while not temp_stack.is_empty():
-        stk.push(temp_stack.pop())
+    # Ahora devolvemos todos los elementos a la pila original como estaban
+    while not temp_stack.is_empty():  # mientras tengamos elementos guardados
+        stk.push(temp_stack.pop())  # los devolvemos a la pila original
     
-    return out
+    return out  # regresamos todos los resultados encontrados
 
 
 def search_by_field_in_queue(q: Queue, field_name, value):
-    # Busca registros iterando una Queue completa (destructiva)
-    # Restaura la cola al estado original después de la búsqueda
-    temp_list = LinkedList()  # lista temporal para elementos
-    out = LinkedList()  # resultados
+    # Esta función busca en la cola, también es lenta como la pila
+    # La diferencia es que revisamos desde el primero hasta el último
+    temp_list = LinkedList()  # usamos una lista temporal para guardar todo
+    out = LinkedList()  # aquí ponemos los resultados de la búsqueda
     
-    # Desencolar todos los elementos
-    while not q.is_empty():
-        rec = q.dequeue()  # extraer elemento
-        temp_list.append(rec)  # guardar para restaurar
+    # Sacamos todos los elementos de la cola para revisarlos
+    while not q.is_empty():  # mientras haya elementos en la cola
+        rec = q.dequeue()  # sacamos el primero de la fila
+        temp_list.append(rec)  # lo guardamos para no perderlo
         
-        v = getattr(rec, field_name, None)
+        v = getattr(rec, field_name, None)  # obtenemos el valor del campo
         try:
-            if v and str(v).lower() == str(value).lower():
-                out.append(rec)  # agregar si coincide
-        except Exception:
-            continue
+            if v and str(v).lower() == str(value).lower():  # si es lo que buscamos
+                out.append(rec)  # lo agregamos a los resultados
+        except Exception:  # si algo sale mal
+            continue  # continuamos con el siguiente elemento
     
-    # Restaurar cola original
-    for rec in temp_list:
-        q.enqueue(rec)
+    # Regresamos todos los elementos a la cola en el mismo orden
+    for rec in temp_list:  # por cada elemento que guardamos
+        q.enqueue(rec)  # lo volvemos a meter a la cola
     
-    return out
+    return out  # devolvemos todo lo que encontramos
 
 
 def search_by_date_range(tree_or_structure, start_date, end_date):
@@ -286,10 +294,10 @@ def interactive_menu():
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))  # nuevo árbol índice
             for rec in ll:
                 tree_for_last_sort.insert(rec)  # poblar árbol con registros ordenados
-            print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')  # informar resultado
-            # mostrar los primeros 10 registros resultantes para que el usuario vea el efecto
-            print('\nPrimeros registros despues de ordenar:')
-            print_first_n_from_list(ll, 10)  # imprimir un preview de 10 registros
+            print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')  # informar resultado completo
+            # mostrar todos los registros resultantes para verificar el ordenamiento completo
+            print('\nTodos los registros despues de ordenar por Customer ID:')
+            print_first_n_from_list(ll, None)  # imprimir todos los registros sin limitación
         elif opt == '2' or opt == '3':
             # opciones 2 y 3: 2=First Name (merge), 3=Subscription Date (quick)
             if ll is None:
@@ -312,8 +320,8 @@ def interactive_menu():
             for rec in ll:
                 tree_for_last_sort.insert(rec)  # poblar índice con orden actual
             print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
-            print('\nPrimeros registros despues de ordenar:')
-            print_first_n_from_list(ll, 10)  # mostrar preview
+            print('\nTodos los registros despues de ordenar:')
+            print_first_n_from_list(ll, None)  # mostrar todos los registros completos
         elif opt == '4':
             # Ordenar por Country
             if ll is None:
@@ -327,8 +335,8 @@ def interactive_menu():
             for rec in ll:
                 tree_for_last_sort.insert(rec)
             print(f'Ordenado por Country (merge sort). Total registros: {ll.size()}')
-            print('\nPrimeros registros despues de ordenar:')
-            print_first_n_from_list(ll, 10)
+            print('\nTodos los registros despues de ordenar por pais:')
+            print_first_n_from_list(ll, None)  # mostrar la base de datos completa ordenada
         elif opt == '5':
             # Mostrar primeros n registros o todos
             if ll is None:
@@ -385,19 +393,14 @@ def interactive_menu():
                 print(f'Pila:  {results_stack.size()} registros (tiempo: {time_stack:.6f}s)')  # resultados pila
                 print(f'Cola:  {results_queue.size()} registros (tiempo: {time_queue:.6f}s)')  # resultados cola
                 
-                # Mostrar algunos registros encontrados
+                # Mostrar todos los registros encontrados sin limitaciones
                 if results_tree.size() > 0:
-                    print(f'\nPrimeros registros encontrados:')  # cabecera preview
-                    count = 0
-                    for r in results_tree:
-                        if count >= 5:  # limitar a 5 registros
-                            break
-                        print(f'  {r}')  # mostrar registro
-                        count += 1
-                    if results_tree.size() > 5:
-                        print(f'  ... y {results_tree.size() - 5} más')
+                    print(f'\nTodos los registros encontrados en la búsqueda:')  # mostrar resultados completos
+                    for r in results_tree:  # iterar sobre todos los resultados
+                        print(f'  {r}')  # imprimir cada registro encontrado
+                    print(f'\nTotal de coincidencias: {results_tree.size()} registros')  # resumen final
                 else:
-                    print('No se encontraron registros con ese criterio.')  # no hay resultados
+                    print('No se encontraron registros con ese criterio en toda la base de datos.')  # búsqueda exhaustiva sin resultados
                     
             elif choice == '5':  # búsqueda por rango de fechas
                 fmt = '%Y-%m-%d'  # formato fecha esperado
@@ -436,17 +439,14 @@ def interactive_menu():
                 print(f'Pila:  {res_stack.size()} registros (tiempo: {time_stack:.6f}s)')  # resultados pila
                 print(f'Cola:  {res_queue.size()} registros (tiempo: {time_queue:.6f}s)')  # resultados cola
                 
-                # Preview de resultados
+                # Mostrar todos los resultados del rango de fechas
                 if res_tree.size() > 0:
-                    print(f'\nPrimeros registros en el rango:')  # cabecera preview
-                    count = 0
-                    for r in res_tree:
-                        if count >= 3:  # limitar a 3 registros
-                            break
-                        print(f'  {r}')  # mostrar registro
-                        count += 1
+                    print(f'\nTodos los registros en el rango de fechas {d1} a {d2}:')  # mostrar rango completo
+                    for r in res_tree:  # mostrar cada registro del rango
+                        print(f'  {r}')  # imprimir registro completo
+                    print(f'\nTotal de registros en el rango: {res_tree.size()}')  # conteo final
                 else:
-                    print('No hay registros en ese rango de fechas.')  # no hay resultados
+                    print('No hay registros en ese rango de fechas en toda la base de datos.')  # búsqueda completa sin resultados
             else:
                 print('Opcion de busqueda no valida.')  # opción inválida
                 
@@ -488,27 +488,14 @@ def interactive_menu():
             # Ordenar por conteo descendente
             cc_sorted = merge_sort_linkedlist(cc_list, keyfn=lambda x: -x.count)  # ordenar desc
             
-            # Preguntar cuántos mostrar
-            choice = input('Cuantos paises mostrar? (numero o "todos"): ').strip()  # solicitar cantidad
-            if choice.lower() in ('todos', 'n', ''):
-                to_show = None  # mostrar todos
-            else:
-                try:
-                    to_show = int(choice)  # parsear número
-                    if to_show <= 0:
-                        to_show = None
-                except Exception:
-                    print('Entrada invalida, mostrando todos')  # error parsing
-                    to_show = None
+            # Mostramos todos los países sin preguntar porque queremos información completa
+            print('\nTodos los clientes por pais (ordenados de mayor a menor):')  # mostrar todo
             
-            # Mostrar países y conteos
-            print('\nClientes por pais:')  # cabecera
-            i = 0
-            for item in cc_sorted:  # iterar países ordenados
-                if to_show is not None and i >= to_show:  # límite alcanzado
-                    break
-                print(f'  {item}')  # mostrar país:conteo
-                i += 1
+            # Recorremos y mostramos cada país con su cantidad de clientes
+            for item in cc_sorted:  # por cada país en orden descendente
+                print(f'  {item}')  # mostramos el país y cuántos clientes tiene
+            
+            print(f'\nResumen completo: {cc_sorted.size()} paises diferentes en total')  # resumen final
             
             # Mostrar fechas extremas
             if stats['min_date'] and stats['max_date']:  # si hay fechas
@@ -527,22 +514,27 @@ def interactive_menu():
             print('Formato: clave - numero_de_registros')  # formato explicación
             print('----------------------------------------')  # separador
             
-            level = 0  # nivel actual
-            nodes_in_level = 1  # nodos esperados en nivel
-            nodes_printed = 0  # nodos impresos en nivel actual
+            level = 0  # empezamos desde el nivel 0 (la raíz)
+            nodes_in_level = 1  # en el primer nivel solo hay un nodo
+            nodes_printed = 0  # contador de nodos que hemos mostrado en este nivel
+            total_nodes = 0  # contador total de nodos en el árbol
             
-            for key, records in tree_for_last_sort.level_order():  # recorrer por niveles
-                if nodes_printed == 0:  # inicio de nuevo nivel
-                    print(f'Nivel {level}:')  # cabecera nivel
+            # Recorremos todo el árbol nivel por nivel sin limitaciones
+            for key, records in tree_for_last_sort.level_order():  # obtenemos cada nodo por niveles
+                if nodes_printed == 0:  # si es el primer nodo del nivel
+                    print(f'Nivel {level}:')  # mostramos qué nivel estamos viendo
                 
-                print(f'  {key} - {records.size()}')  # mostrar nodo
-                nodes_printed += 1  # incrementar contador
+                print(f'  {key} - {records.size()} registros')  # mostramos la clave y cuántos registros tiene
+                nodes_printed += 1  # contamos que ya mostramos este nodo
+                total_nodes += 1  # contamos el nodo total
                 
-                if nodes_printed >= nodes_in_level:  # nivel completo
-                    level += 1  # siguiente nivel
-                    nodes_in_level *= 2  # doble nodos en siguiente nivel
-                    nodes_printed = 0  # reset contador
-                    print()  # línea vacía entre niveles
+                if nodes_printed >= nodes_in_level:  # si ya mostramos todos los nodos de este nivel
+                    level += 1  # pasamos al siguiente nivel
+                    nodes_in_level *= 2  # el siguiente nivel puede tener el doble de nodos
+                    nodes_printed = 0  # reiniciamos el contador del nivel
+                    print()  # dejamos una línea en blanco para separar niveles
+            
+            print(f'\nArbol completo: {total_nodes} nodos en {level + 1} niveles')  # resumen final del árbol
         elif opt == '0':
             print('Saliendo')
             break

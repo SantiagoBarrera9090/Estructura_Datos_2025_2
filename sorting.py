@@ -8,14 +8,13 @@ from structures import LinkedList
 
 
 def _normalize_key(keyfn, record):
-    """Normaliza la clave para comparaciones seguras.
+    """Esta función prepara los valores para poder compararlos de forma segura.
 
-    Devuelve una tupla (type_tag, value) donde type_tag ordena tipos:
-    - 0: valores ordenables directos (int, float, date, datetime)
-    - 1: strings (se comparan en minúscula)
-    - 2: fallback (cadena vacía)
-
-    Evita comparar tipos incompatibles directamente.
+    Cuando ordenamos, necesitamos comparar números con números, texto con texto, etc.
+    Esta función se encarga de organizar todo para que no haya problemas:
+    - Los números y fechas van primero (más fáciles de ordenar)
+    - El texto va después (se convierte a minúsculas)
+    - Si algo está roto, lo ponemos al final
     """
     try:
         v = keyfn(record)
@@ -100,9 +99,10 @@ def merge_sorted(left: LinkedList, right: LinkedList, keyfn):
 
 
 def merge_sort_linkedlist(ll: LinkedList, keyfn=lambda r: r.customer_id):
-    """Merge sort recursivo para linked lists.
-
-    Retorna una nueva LinkedList ordenada.
+    """Esta función ordena una lista usando el método Merge Sort.
+    
+    Merge Sort es como ordenar dos pilas de cartas: divides todo por la mitad,
+    ordenas cada mitad por separado, y luego las combinas de forma ordenada.
     """
     if ll.head is None or ll.head.next is None:
         out = LinkedList()

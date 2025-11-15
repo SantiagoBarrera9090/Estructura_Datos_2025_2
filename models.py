@@ -3,10 +3,10 @@ from datetime import datetime, date
 
 class Record:
     """
-    Registro de cliente.
-
-    Representa una fila del CSV con los campos utilizados por el programa.
-    Proporciona acceso directo a cada campo como atributos.
+    Esta clase representa la información de un cliente individual.
+    
+    Cada Record contiene todos los datos de una persona que está en nuestra base de datos.
+    Es como una ficha con toda la información personal y de contacto.
     """
 
     __slots__ = (
@@ -33,24 +33,25 @@ class Record:
         subscription_date,
         website,
     ):
-        # Asignación directa de atributos.
-        self.customer_id = customer_id
-        self.first_name = first_name
-        self.last_name = last_name
-        self.company = company
-        self.city = city
-        self.country = country
-        self.email = email
+        # Guardamos toda la información del cliente en variables fáciles de usar
+        self.customer_id = customer_id  # el número único que identifica a este cliente
+        self.first_name = first_name  # el nombre de pila de la persona
+        self.last_name = last_name  # el apellido de la persona
+        self.company = company  # la empresa donde trabaja
+        self.city = city  # la ciudad donde vive
+        self.country = country  # el país donde vive
+        self.email = email  # su dirección de correo electrónico
 
-        # Fecha: parseo tolerante.
+        # La fecha necesita un tratamiento especial porque puede venir en diferentes formatos
         self.subscription_date = self._parse_date(subscription_date)
 
-        self.website = website
+        self.website = website  # su página web personal o de la empresa
 
     def _parse_date(self, value):
-        """Intenta convertir cadenas a date; si falla devuelve None.
-
-        Si la fecha no es válida, se devuelve None en lugar de generar una excepción.
+        """Esta función convierte texto en fecha real.
+        
+        A veces las fechas vienen como texto y necesitamos convertirlas a fechas de verdad
+        para poder compararlas y ordenarlas correctamente.
         """
         if value is None:
             return None

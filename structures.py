@@ -7,12 +7,12 @@ estructuras temporales fuera de las colecciones de núcleo.
 """
 
 class Node:
-    """Nodo basico para listas enlazadas."""
+    """Un nodo simple que puede contener cualquier información y conectarse con otros nodos."""
 
     def __init__(self, data=None):
-        self.data = data
-        self.next = None
-        self.prev = None
+        self.data = data  # aquí guardamos la información que queremos almacenar
+        self.next = None  # este apunta al siguiente nodo en la cadena
+        self.prev = None  # este apunta al nodo anterior, para poder ir hacia atrás
 
 
 class LinkedList:
@@ -29,20 +29,20 @@ class LinkedList:
         self._size = 0
 
     def append(self, data):
-        node = Node(data)
-        if not self.head:
-            self.head = self.tail = node
-        else:
-            self.tail.next = node
-            node.prev = self.tail
-            self.tail = node
-        self._size += 1
+        node = Node(data)  # creamos un nuevo nodo con la información
+        if not self.head:  # si la lista está vacía
+            self.head = self.tail = node  # este nuevo nodo será el primero y el último
+        else:  # si ya hay elementos en la lista
+            self.tail.next = node  # el último actual apunta al nuevo
+            node.prev = self.tail  # el nuevo apunta hacia atrás al último actual
+            self.tail = node  # ahora el nuevo es el último
+        self._size += 1  # aumentamos el contador de elementos
 
     def __iter__(self):
-        cur = self.head
-        while cur:
-            yield cur.data
-            cur = cur.next
+        cur = self.head  # empezamos desde el primer nodo
+        while cur:  # mientras tengamos un nodo que revisar
+            yield cur.data  # devolvemos la información de este nodo
+            cur = cur.next  # pasamos al siguiente nodo
 
     def is_empty(self):
         return self.head is None
