@@ -14,8 +14,6 @@ from models import Record  # clase Record para representar cada fila del CSV
 from structures import LinkedList, Stack, Queue, AVLTree  # estructuras propias del proyecto
 from sorting import merge_sort_linkedlist, quick_sort_linkedlist  # algoritmos de ordenamiento locales
 
-
-
 def load_csv(path, tree_keyfn=None):
     """Carga un CSV y construye las estructuras de datos principales.
 
@@ -31,6 +29,9 @@ def load_csv(path, tree_keyfn=None):
     min_date = None  # guardaremos la fecha de suscripción más antigua que encontremos
     max_date = None  # guardaremos la fecha de suscripción más reciente que encontremos
 
+    print('\nIniciando carga de base de datos...')  # informar inicio de carga
+    start_time = time.time()  # guardar tiempo de inicio para medir duración total
+    
     # abrimos el archivo CSV para lectura, ignorando caracteres problemáticos
     with open(path, encoding="utf-8", errors="ignore") as f:
         reader = csv.reader(f)  # creamos un lector que nos dará una fila a la vez
@@ -102,6 +103,10 @@ def load_csv(path, tree_keyfn=None):
             tree.insert(rec)  # indexar en el AVLTree
             count += 1  # incrementar contador
 
+            # Mostrar progreso cada 20,000 registros - MEJORA 1
+            if count % 20000 == 0:  # cada vez que llegamos a un múltiplo de 20,000
+                print(f'Cargados {count:,} registros...')  # mostrar progreso simple
+
             # Actualizar min/max de suscripción si está presente
             if rec.subscription_date:
                 if (min_date is None) or (rec.subscription_date < min_date):
@@ -109,10 +114,12 @@ def load_csv(path, tree_keyfn=None):
                 if (max_date is None) or (rec.subscription_date > max_date):
                     max_date = rec.subscription_date
 
+    # Mostrar resumen final de la carga
+    total_time = time.time() - start_time  # calcular tiempo total de carga
+    print(f'\nCarga completada: {count:,} registros')  # resumen final simple
+    
     stats = {'count': count, 'min_date': min_date, 'max_date': max_date}  # paquete de estadísticas
     return tree, ll, stk, q, stats
-
-
 
 def print_first_n_from_list(ll: LinkedList, n=None, sort_info=None):
     # Esta función muestra todos los registros adaptandose al tamaño de la base de datos
@@ -166,7 +173,6 @@ def print_first_n_from_list(ll: LinkedList, n=None, sort_info=None):
         else:
             print(f'RESUMEN: {i:,} de {total_records:,} registros mostrados en {elapsed_total:.2f} segundos')  # resumen original
 
-
 def search_by_field_in_tree(tree: AVLTree, field_name, value):
     # Esta función busca clientes en el árbol binario por cualquier campo específico
     # Es muy eficiente porque aprovecha la estructura del árbol para buscar rápidamente
@@ -183,7 +189,6 @@ def search_by_field_in_tree(tree: AVLTree, field_name, value):
     for r in tree.find_by_predicate(pred):  # le pedimos al árbol que nos dé todos los que cumplen la condición
         out.append(r)  # agregamos cada resultado a nuestra lista
     return out  # devolvemos todos los registros que encontramos
-
 
 def search_by_field_in_stack(stk: Stack, field_name, value):
     # Esta función busca en la pila pero es más lenta que el árbol
@@ -209,7 +214,6 @@ def search_by_field_in_stack(stk: Stack, field_name, value):
     
     return out  # regresamos todos los resultados encontrados
 
-
 def search_by_field_in_queue(q: Queue, field_name, value):
     # Esta función busca en la cola, también es lenta como la pila
     # La diferencia es que revisamos desde el primero hasta el último
@@ -233,7 +237,6 @@ def search_by_field_in_queue(q: Queue, field_name, value):
         q.enqueue(rec)  # lo volvemos a meter a la cola
     
     return out  # devolvemos todo lo que encontramos
-
 
 def search_by_date_range(tree_or_structure, start_date, end_date):
     # Busca registros por rango de fechas de suscripción
@@ -274,7 +277,6 @@ def search_by_date_range(tree_or_structure, start_date, end_date):
                 out.append(r)
     return out
 
-
 def interactive_menu():
     # Menu interactivo principal.
     # Solo las opciones 0..5 estan operativas en esta version. Las demas se reservan.
@@ -289,7 +291,6 @@ def interactive_menu():
     # ultimo orden aplicado (campo)
     last_sort_field = None
     # arbol construido con la clave del ultimo orden (para opcion 8)
-    tree_for_last_sort = None
     tree_for_last_sort = None
 
     # si existe BusinessData.csv en el folder, preguntamos si cargarla al inicio
@@ -324,17 +325,23 @@ def interactive_menu():
                 continue
             field = 'customer_id'  # campo a usar como clave
             keyfn = lambda r: getattr(r, field, None)  # función que extrae la clave de un record
+            
+            print(f'Ordenando {ll.size():,} registros por Customer ID...')  # MEJORA 2 - Mostrar progreso
             # usamos MergeSort por defecto
             ll = merge_sort_linkedlist(ll, keyfn)  # ordenar la linked list usando merge sort
             last_sort_field = field  # recordar último campo usado para ordenar
+            
             # construyo arbol indexado por este campo para opcion 8
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))  # nuevo árbol índice
-            for rec in ll:
+            print('Construyendo árbol para visualización...')  # MEJORA 2 - Mostrar progreso
+            for i, rec in enumerate(ll):
                 tree_for_last_sort.insert(rec)  # poblar árbol con registros ordenados
+                # Mostrar progreso cada 20,000 registros
+                if (i + 1) % 20000 == 0:
+                    print(f'  Procesados {i + 1:,} registros...')
+                    
             print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')  # informar resultado completo
-            # mostrar todos los registros resultantes para verificar el ordenamiento completo
-            print('\nTodos los registros despues de ordenar por Customer ID:')
-            print_first_n_from_list(ll, None, 'Customer ID (merge sort)')  # incluir información del ordenamiento
+          
         elif opt == '2':
             # Ordenar por First Name usando merge sort
             if ll is None:
@@ -342,16 +349,22 @@ def interactive_menu():
                 continue
             field = 'first_name'  # ordenar por nombre
             keyfn = lambda r: getattr(r, field, None)
+            
+            print(f'Ordenando {ll.size():,} registros por First Name...')  # MEJORA 2
             ll = merge_sort_linkedlist(ll, keyfn)  # merge sort para nombres
             last_sort_field = field
             sort_name = 'First Name (merge sort)'
+            
             # construyo tambien el arbol para la opcion 8
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
-            for rec in ll:
+            print('Construyendo árbol para visualización...')  # MEJORA 2
+            for i, rec in enumerate(ll):
                 tree_for_last_sort.insert(rec)  # poblar índice con orden actual
+                if (i + 1) % 20000 == 0:
+                    print(f'  Procesados {i + 1:,} registros...')
+                    
             print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
-            print('\nTodos los registros despues de ordenar por First Name:')
-            print_first_n_from_list(ll, None, sort_name)  # mostrar con información de ordenamiento
+           
         elif opt == '3':
             # Ordenar por Subscription Date usando quick sort
             if ll is None:
@@ -359,16 +372,22 @@ def interactive_menu():
                 continue
             field = 'subscription_date'  # ordenar por fecha de suscripción
             keyfn = lambda r: getattr(r, field, None)
+            
+            print(f'Ordenando {ll.size():,} registros por Subscription Date...')  # MEJORA 2
             ll = quick_sort_linkedlist(ll, keyfn)  # quick sort para fechas
             last_sort_field = field
             sort_name = 'Subscription Date (quick sort)'
+            
             # construyo tambien el arbol para la opcion 8
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
-            for rec in ll:
+            print('Construyendo árbol para visualización...')  # MEJORA 2
+            for i, rec in enumerate(ll):
                 tree_for_last_sort.insert(rec)  # poblar índice con orden actual
+                if (i + 1) % 20000 == 0:
+                    print(f'  Procesados {i + 1:,} registros...')
+                    
             print(f'Ordenado por {sort_name}. Total registros: {ll.size()}')
-            print('\nTodos los registros despues de ordenar por Subscription Date:')
-            print_first_n_from_list(ll, None, sort_name)  # mostrar con información de ordenamiento
+          
         elif opt == '4':
             # Ordenar por Country
             if ll is None:
@@ -376,14 +395,20 @@ def interactive_menu():
                 continue
             field = 'country'  # campo país
             keyfn = lambda r: getattr(r, field, None)
+            
+            print(f'Ordenando {ll.size():,} registros por Country...')  # MEJORA 2
             ll = merge_sort_linkedlist(ll, keyfn)  # ordenar por país
             last_sort_field = field
+            
             tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
-            for rec in ll:
+            print('Construyendo árbol para visualización...')  # MEJORA 2
+            for i, rec in enumerate(ll):
                 tree_for_last_sort.insert(rec)
+                if (i + 1) % 20000 == 0:
+                    print(f'  Procesados {i + 1:,} registros...')
+                    
             print(f'Ordenado por Country (merge sort). Total registros: {ll.size()}')
-            print('\nTodos los registros despues de ordenar por pais:')
-            print_first_n_from_list(ll, None, 'Country (merge sort)')  # incluir información del ordenamiento
+        
         elif opt == '5':
             # Mostrar primeros n registros o todos
             if ll is None:
@@ -425,7 +450,7 @@ def interactive_menu():
                 field = field_map[choice]
                 value = input(f'Valor para {field}: ').strip()  # valor a buscar
                 
-                print(f'\\nBuscando "{value}" en campo {field} en base de datos de {ll.size():,} registros...')  # informar tamaño
+                print(f'\nBuscando "{value}" en campo {field} en base de datos de {ll.size():,} registros...')  # informar tamaño
                 
                 # Búsqueda en árbol (más eficiente para cualquier tamaño)
                 t0 = time.perf_counter()  # tiempo inicial con alta precisión
@@ -446,7 +471,7 @@ def interactive_menu():
                 time_queue = t5 - t4
                 
                 # Mostrar resultados y tiempos con formato optimizado
-                print(f'\\nResultados de búsqueda en base de {ll.size():,} registros:')  # cabecera con tamaño
+                print(f'\nResultados de búsqueda en base de {ll.size():,} registros:')  # cabecera con tamaño
                 print(f'Arbol: {results_tree.size():,} registros encontrados (tiempo: {time_tree:.6f}s)')  # formato con comas
                 print(f'Pila:  {results_stack.size():,} registros encontrados (tiempo: {time_stack:.6f}s)')  # formato con comas
                 print(f'Cola:  {results_queue.size():,} registros encontrados (tiempo: {time_queue:.6f}s)')  # formato con comas
@@ -454,7 +479,7 @@ def interactive_menu():
                 # Mostrar eficiencia relativa
                 if time_stack > 0 and time_tree > 0:
                     efficiency = time_stack / time_tree
-                    print(f'\\nEficiencia: El árbol es {efficiency:.1f}x más rápido que estructuras lineales')
+                    print(f'\nEficiencia: El árbol es {efficiency:.1f}x más rápido que estructuras lineales')
                 
                 # Mostrar todos los registros encontrados sin limitaciones
                 if results_tree.size() > 0:
@@ -514,7 +539,7 @@ def interactive_menu():
                 print('Opcion de busqueda no valida.')  # opción inválida
                 
         elif opt == '7':
-            # Mostrar estadísticas básicas
+            # Mostrar estadísticas básicas - MEJORA 3
             if ll is None or stats is None:
                 print('Primero cargue la base (cargue el archivo al iniciar)')  # verificar datos
                 continue
@@ -534,77 +559,79 @@ def interactive_menu():
             total_countries = 0  # contador países
             for _ in country_idx.items():  # iterar claves únicas
                 total_countries += 1
-            print(f'\\nEstadísticas de base de datos con {ll.size():,} registros:')  # contexto de tamaño
-            print(f'Total de países diferentes: {total_countries:,}')  # formato con comas
             
-            # Crear lista de países con conteos optimizada
-            class CountryCount:
-                def __init__(self, country, count):
-                    self.country = country  # nombre país
-                    self.count = count  # número clientes
-                def __str__(self):
-                    return f'{self.country}: {self.count:,} clientes'  # formato con comas para números grandes
+            print(f'\nEstadísticas de base de datos con {ll.size():,} registros:')  # contexto de tamaño
+            print(f'• Total de países: {total_countries:,}')  # formato con comas
             
-            cc_list = LinkedList()  # lista países-conteos
+            # Crear lista de países con conteos
+            country_counts = []
             for key, records in country_idx.items():  # por cada país
-                cc_list.append(CountryCount(key, records.size()))  # agregar conteo
+                country_counts.append((key, records.size()))  # agregar conteo
             
             # Ordenar por conteo descendente
-            cc_sorted = merge_sort_linkedlist(cc_list, keyfn=lambda x: -x.count)  # ordenar desc
+            country_counts.sort(key=lambda x: x[1], reverse=True)
             
-            # Mostramos todos los países sin preguntar porque queremos información completa
-            print('\nTodos los clientes por pais (ordenados de mayor a menor):')  # mostrar todo
+            # Preguntar cuántos países mostrar
+            while True:
+                try:
+                    n_input = input(f'\n¿Cuántos países mostrar? (ingrese número o "todos" para ver los {total_countries} países): ').strip().lower()
+                    if n_input == 'todos' or n_input == 'all':
+                        n_countries = total_countries
+                        break
+                    else:
+                        n_countries = int(n_input)
+                        if n_countries > 0 and n_countries <= total_countries:
+                            break
+                        else:
+                            print(f'Por favor ingrese un número entre 1 y {total_countries}')
+                except ValueError:
+                    print('Entrada inválida. Ingrese un número o "todos"')
             
-            # Recorremos y mostramos cada país con su cantidad de clientes
-            for item in cc_sorted:  # por cada país en orden descendente
-                print(f'  {item}')  # mostramos el país y cuántos clientes tiene
-            
-            print(f'\nResumen completo: {cc_sorted.size()} paises diferentes en total')  # resumen final
+            print(f'\n• Clientes por país (mostrando {n_countries} de {total_countries}):')
+            for i in range(min(n_countries, len(country_counts))):
+                country, count = country_counts[i]
+                print(f'  {country}: {count:,}')  # formato simple como solicitado
             
             # Mostrar fechas extremas
             if stats['min_date'] and stats['max_date']:  # si hay fechas
-                print(f'\nFecha mas antigua: {stats["min_date"]}')  # fecha mínima
-                print(f'Fecha mas reciente: {stats["max_date"]}')  # fecha máxima
+                print(f'\n• Fecha mas antigua: {stats["min_date"]}')  # fecha mínima
+                print(f'• Fecha mas reciente: {stats["max_date"]}')  # fecha máxima
             else:
-                print('\nNo hay fechas de suscripcion validas en los datos.')  # sin fechas
+                print('\n• No hay fechas de suscripcion validas en los datos.')  # sin fechas
                 
         elif opt == '8':
-            # Mostrar árbol binario por niveles
+            # Mostrar árbol binario con estructura jerárquica 
             if tree_for_last_sort is None:
-                print('No hay criterio de orden aplicado aun. Ordene por algun campo primero (opciones 1-4).')  # sin orden
+                print('No hay criterio de orden aplicado aun. Ordene por algun campo primero (opciones 1-4).')
                 continue
             
-            print(f'\nArbol binario por niveles (ordenado por {last_sort_field}):')  # cabecera
-            print('Formato: clave - numero_de_registros')  # formato explicación
-            print('----------------------------------------')  # separador
+            print(f'\nVisualizacion del árbol binario por {last_sort_field}:')
             
-            level = 0  # empezamos desde el nivel 0 (la raíz)
-            nodes_in_level = 1  # en el primer nivel solo hay un nodo
-            nodes_printed = 0  # contador de nodos que hemos mostrado en este nivel
-            total_nodes = 0  # contador total de nodos en el árbol
-            
-            # Recorremos todo el árbol nivel por nivel sin limitaciones
-            for key, records in tree_for_last_sort.level_order():  # obtenemos cada nodo por niveles
-                if nodes_printed == 0:  # si es el primer nodo del nivel
-                    print(f'Nivel {level}:')  # mostramos qué nivel estamos viendo
+            def print_tree(node, prefix="", is_left=True):
+                if node is None:
+                    return
                 
-                print(f'  {key} - {records.size()} registros')  # mostramos la clave y cuántos registros tiene
-                nodes_printed += 1  # contamos que ya mostramos este nodo
-                total_nodes += 1  # contamos el nodo total
+                # Mostrar el nodo actual
+                if prefix == "":
+                    print(f"Raíz: {node.key}")
+                else:
+                    connector = "Izq → " if is_left else "Der → "
+                    print(f"{prefix}{connector}{node.key}")
                 
-                if nodes_printed >= nodes_in_level:  # si ya mostramos todos los nodos de este nivel
-                    level += 1  # pasamos al siguiente nivel
-                    nodes_in_level *= 2  # el siguiente nivel puede tener el doble de nodos
-                    nodes_printed = 0  # reiniciamos el contador del nivel
-                    print()  # dejamos una línea en blanco para separar niveles
+                # Calcular el nuevo prefijo para los hijos
+                new_prefix = prefix + ("    " if is_left else "    ")
+                
+                # Recursivamente mostrar los hijos
+                print_tree(node.left, new_prefix, True)
+                print_tree(node.right, new_prefix, False)
             
-            print(f'\nArbol completo: {total_nodes:,} nodos distribuidos en {level + 1} niveles')  # resumen con formato
+            # Llamar a la función recursiva
+            print_tree(tree_for_last_sort.root)
         elif opt == '0':
             print('Saliendo')
             break
         else:
             print('Opcion no valida')
-
 
 if __name__ == '__main__':  # esta línea se ejecuta solo cuando corremos este archivo directamente
     if '--test' in sys.argv:  # si el usuario pasó el parámetro --test al ejecutar
