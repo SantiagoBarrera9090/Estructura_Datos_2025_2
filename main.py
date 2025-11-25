@@ -412,8 +412,6 @@ def interactive_menu():
                 tree_for_last_sort.insert(rec)
             
             print(f'Total registros: {ll.size()}')
-            print('\nTodos los registros después de ordenar:')
-            print_first_n_from_list(ll, None, sort_name)
          
         elif opt == '2':
             # Ordenar por First Name usando merge sort
