@@ -161,3 +161,82 @@ def quick_sort_linkedlist(ll: LinkedList, keyfn=lambda r: r.customer_id):
     for item in greater_sorted:
         out.append(item)
     return out
+
+
+
+
+def three_way_radix_quicksort(ll: LinkedList, keyfn=lambda r: r.customer_id):
+    # Definir función principal que recibe LinkedList y función para extraer campo
+    """Este algoritmo funciona con parte de la lógica de radix y la de quick"""
+    
+    # Verificar si la lista está vacía o tiene solo un elemento
+    if ll.head is None or ll.head.next is None:
+        # Devolver una copia de la lista (no hay nada que ordenar)
+        return ll.copy()
+    
+    # Crear lista temporal para facilitar procesamiento recursivo
+    records = []
+    # Empezar desde el primer nodo de la LinkedList
+    cur = ll.head
+    # Recorrer toda la LinkedList
+    while cur:
+        # Agregar cada registro a la lista temporal
+        records.append(cur.data)
+        # Mover al siguiente nodo
+        cur = cur.next
+    
+    # Definir función recursiva interna para el ordenamiento
+    def _sort(recs, depth=0):
+        if len(recs) <= 1:
+            return recs
+        
+        pivot = keyfn(recs[0])
+
+        if depth >= len(pivot):
+
+            char_pivot = ''
+        else:
+            char_pivot = pivot[depth].lower()
+        
+        lt, eq, gt = [], [], []
+        
+        for record in recs:
+
+            current_id = keyfn(record)
+
+            if depth >= len(current_id):
+    
+                current_char = ''
+            else:
+    
+                current_char = current_id[depth].lower()
+            
+
+            if current_char < char_pivot:
+    
+                lt.append(record)
+            elif current_char > char_pivot:
+    
+                gt.append(record)
+            else:
+                
+                eq.append(record)
+        
+       
+        if eq and char_pivot:
+            
+            eq = _sort(eq, depth + 1)
+        
+       
+        return _sort(lt, depth) + eq + _sort(gt, depth)
+    
+    # Llamar a la función recursiva con todos los registros
+    sorted_records = _sort(records)
+    # Crear nueva LinkedList para el resultado final
+    result = LinkedList()
+    # Recorrer todos los registros ordenados
+    for record in sorted_records:
+        # Agregar cada registro ordenado a la nueva LinkedList
+        result.append(record)
+    # Devolver la LinkedList completamente ordenada
+    return result

@@ -12,7 +12,7 @@ import time  # para medir tiempos de ejecución
 from datetime import datetime  # para manejo de fechas
 from models import Record  # clase Record para representar cada fila del CSV
 from structures import LinkedList, Stack, Queue, AVLTree  # estructuras propias del proyecto
-from sorting import merge_sort_linkedlist, quick_sort_linkedlist  # algoritmos de ordenamiento locales
+from sorting import merge_sort_linkedlist, quick_sort_linkedlist, three_way_radix_quicksort  # algoritmos de ordenamiento locales
 
 def load_csv(path, tree_keyfn=None):
     """Carga un CSV y construye las estructuras de datos principales.
@@ -319,29 +319,100 @@ def interactive_menu():
         print('0. Salir')  # opción 0: salir del programa
         opt = input('Seleccione una opcion: ').strip()  # leer la opción seleccionada por el usuario
         if opt == '1':
-            # Ordenar por Customer Id
+            # Ordenar por Customer Id con comparación de algoritmos
             if ll is None:
-                print('Primero cargue la base (cargue el archivo al iniciar)')  # indicar que no hay datos cargados
+                print('Primero cargue la base (cargue el archivo al iniciar)')
                 continue
-            field = 'customer_id'  # campo a usar como clave
-            keyfn = lambda r: getattr(r, field, None)  # función que extrae la clave de un record
             
-            print(f'Ordenando {ll.size():,} registros por Customer ID...')  # MEJORA 2 - Mostrar progreso
-            # usamos MergeSort por defecto
-            ll = merge_sort_linkedlist(ll, keyfn)  # ordenar la linked list usando merge sort
-            last_sort_field = field  # recordar último campo usado para ordenar
+            # Preguntar qué algoritmo usar
+            print("\nAlgoritmos disponibles para ordenar por Customer ID:")
+            print("1. Merge Sort :(")
+            print("2. 3-Way radix quick Sort :) ")
+            print("3. Comparar tiempos de ambos")
             
-            # construyo arbol indexado por este campo para opcion 8
-            tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))  # nuevo árbol índice
-            print('Construyendo árbol para visualización...')  # MEJORA 2 - Mostrar progreso
-            for i, rec in enumerate(ll):
-                tree_for_last_sort.insert(rec)  # poblar árbol con registros ordenados
-                # Mostrar progreso cada 20,000 registros
-                if (i + 1) % 20000 == 0:
-                    print(f'  Procesados {i + 1:,} registros...')
-                    
-            print(f'Ordenado por Customer Id (merge sort). Total registros: {ll.size()}')  # informar resultado completo
-          
+            algo_choice = input('Seleccione algoritmo: ').strip()
+            
+            field = 'customer_id'
+            keyfn = lambda r: getattr(r, field, None)
+            
+            if algo_choice == '1':
+                # Usar Merge Sort
+                start_time = time.perf_counter()
+                print(start_time)
+                ll_sorted = merge_sort_linkedlist(ll, keyfn)
+                end_time = time.perf_counter()
+                print(end_time)
+                sort_time = end_time - start_time
+                sort_name = 'Customer ID (merge sort)'
+                print(f'Ordenado por {sort_name}. Tiempo: {sort_time:.6f}s')
+                
+            elif algo_choice == '2':
+                # Usar Radix Sort
+                start_time = time.perf_counter()
+                ll_sorted = three_way_radix_quicksort(ll, keyfn)
+                end_time = time.perf_counter()
+                sort_time = end_time - start_time
+                sort_name = 'Customer ID (radix sort)'
+                print(f'Ordenado por {sort_name}. Tiempo: {sort_time:.6f}s')
+                
+            elif algo_choice == '3':
+                # Comparar ambos algoritmos
+                print("\nComparando algoritmos de ordenamiento...")
+                
+                # Merge Sort
+                start_time1 = time.perf_counter()
+                ll_merge = merge_sort_linkedlist(ll, keyfn)
+                end_time1 = time.perf_counter()
+                time_merge = end_time1 - start_time1
+                
+                # Radix Sort  
+                start_time2 = time.perf_counter()
+                ll_radix = three_way_radix_quicksort(ll, keyfn)
+                end_time2 = time.perf_counter()
+                time_radix = end_time2 - start_time2
+                
+                print(f"Merge Sort: {time_merge:.6f} segundos")
+                print(f"Radix Sort: {time_radix:.6f} segundos")
+                
+                if time_merge > 0 and time_radix > 0:
+                    if time_merge < time_radix:
+                        ratio = time_radix / time_merge
+                        print(f"Merge Sort es {ratio:.2f}x más rápido")
+                    else:
+                        ratio = time_merge / time_radix
+                        print(f"Radix Sort es {ratio:.2f}x más rápido")
+                
+                # Preguntar cuál resultado usar
+                use_algo = input("\n¿Usar resultado de (1)Merge Sort o (2)Radix Sort? ").strip()
+                if use_algo == '1':
+                    ll_sorted = ll_merge
+                    sort_name = 'Customer ID (merge sort)'
+                else:
+                    ll_sorted = ll_radix  
+                    sort_name = 'Customer ID (radix sort)'
+            elif algo_choice == '0' :
+                break
+                
+            else:
+                print('Opción no válida, usando Merge Sort por defecto')
+                start_time = time.perf_counter()
+                ll_sorted = merge_sort_linkedlist(ll, keyfn)
+                end_time = time.perf_counter()
+                sort_time = end_time - start_time
+                sort_name = 'Customer ID (merge sort)'
+                print(f'Ordenado por {sort_name}. Tiempo: {sort_time:.6f}s')
+            
+            # Actualizar la lista principal y estructuras auxiliares
+            ll = ll_sorted
+            last_sort_field = field
+            
+            # Construir árbol para opción 8
+            tree_for_last_sort = AVLTree(keyfn=lambda r: getattr(r, field, None))
+            for rec in ll:
+                tree_for_last_sort.insert(rec)
+            
+            print(f'Total registros: {ll.size()}')
+         
         elif opt == '2':
             # Ordenar por First Name usando merge sort
             if ll is None:
